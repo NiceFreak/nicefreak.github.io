@@ -7,23 +7,32 @@
   <style>
     @page { size: A4; margin: 18mm 16mm; }
     html { scroll-behavior:smooth; }
-    body { max-width:920px; margin:0 auto; padding:0 24px 56px; color:#181818; background:#fff; font-family:"Songti SC","STSong","Noto Serif CJK SC",serif; font-size:17px; line-height:1.72; overflow-wrap:break-word; }
+    body { max-width:920px; margin:0 auto; padding:52px 24px 56px; color:#181818; background:#fff; font-family:"Songti SC","STSong","Noto Serif CJK SC",serif; font-size:17px; line-height:1.72; overflow-wrap:break-word; }
     h1,h2,h3,.meta,.scene,.speaker,.tag,.note-title { font-family:"PingFang SC","Microsoft YaHei",sans-serif; }
     h1 { margin:0 0 24px; font-size:30px; line-height:1.32; text-align:center; }
     h2 { margin:36px 0 18px; padding-bottom:10px; border-bottom:1px solid #d4d4d4; font-size:22px; line-height:1.35; page-break-after:avoid; }
+    h3 { margin:22px 0 10px; font-size:18px; line-height:1.35; }
     p { margin:0 0 12px; }
     .cover { min-height:72vh; display:flex; flex-direction:column; justify-content:center; text-align:center; page-break-after:always; }
     .meta { color:#666; font-size:14px; }
     .legend { max-width:680px; margin:56px auto 0; padding:18px 22px; border:1px solid #d8d8d8; background:#f7f7f4; text-align:left; font-size:15px; }
+    .rights { max-width:680px; margin:28px auto 0; padding:10px 14px; border:1px solid #d0d0d0; background:#fbfbf8; font-weight:700; text-align:left; }
+    .title-page-info { max-width:680px; margin:28px auto 0; text-align:left; font-family:"PingFang SC","Microsoft YaHei",sans-serif; font-size:15px; line-height:1.7; }
+    .title-page-info p { margin:0 0 6px; }
+    .front-section { max-width:820px; margin:0 auto 34px; }
+    .front-section h2 { margin-top:0; }
+    .front-section p { color:#282828; }
+    .term-list { display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:4px 18px; margin:8px 0 0; padding:0; list-style:none; color:#444; font-size:15px; }
+    .term-list li { break-inside:avoid; }
     .page { margin-bottom:34px; page-break-inside:avoid; }
     .scene { display:grid; grid-template-columns:56px minmax(0,1fr) 56px; gap:12px; align-items:baseline; margin:18px 0 14px; padding:10px 12px; border-left:3px solid #222; background:#f7f7f4; font-weight:700; scroll-margin-top:18px; }
     .scene-no { font-family:"Courier New",monospace; text-align:center; }
     .scene-heading { min-width:0; }
     .action { margin-left:28px; color:#222; }
-    .dialogue { margin:18px 0 24px 64px; max-width:640px; padding-left:18px; border-left:1px solid #cfcfcf; }
-    .speaker { display:block; font-weight:700; margin-bottom:6px; }
+    .dialogue { margin:14px 0 18px 64px; max-width:640px; padding-left:18px; border-left:1px solid #cfcfcf; }
+    .speaker { display:block; font-weight:700; }
     .tag { display:inline-block; margin:0 6px 5px 0; padding:2px 7px; border:1px solid #cfcfcf; border-radius:999px; color:#555; background:#fafafa; font-size:13px; line-height:1.45; }
-    .note { margin:14px 0 18px 28px; padding:12px 14px; border:1px solid #dedede; border-left:4px solid #999; background:#fbfbf8; color:#444; font-size:15px; }
+    .note { margin:14px 0 18px 28px; padding:12px 14px; border:1px solid #dedede; background:#fbfbf8; color:#444; font-size:15px; }
     .note-title { font-weight:700; }
     .proper { text-decoration-line:underline; text-decoration-thickness:.07em; text-underline-offset:.16em; white-space:nowrap; }
     .emph { font-weight:700; }
@@ -31,17 +40,21 @@
     a { color: inherit; text-decoration: none; }
     .index-link { display:block; padding:5px 0; border-bottom:1px dotted #777; }
     .screen-only { display:block; }
-    .scene-nav { position:sticky; top:0; z-index:20; max-width:920px; margin:0 auto 18px; padding:8px 24px; background:rgba(255,255,255,.97); border-bottom:1px solid #e4e4e4; font-family:"PingFang SC","Microsoft YaHei",sans-serif; font-size:13px; line-height:1.45; }
-    .scene-nav summary { display:inline-flex; align-items:center; min-height:26px; padding:2px 9px; border:1px solid #cfcfcf; border-radius:4px; background:#fff; cursor:pointer; user-select:none; }
+    .scene-nav { position:fixed; top:0; left:50%; z-index:100; box-sizing:border-box; width:calc(100% - 48px); max-width:920px; margin:0; padding:8px 0; transform:translateX(-50%); background:#fff; border-bottom:1px solid #d4d4d4; box-shadow:0 1px 6px rgba(0,0,0,.04); font-family:"PingFang SC","Microsoft YaHei",sans-serif; font-size:13px; line-height:1.45; }
+    .scene-nav summary { display:flex; align-items:center; justify-content:space-between; box-sizing:border-box; width:100%; max-width:920px; min-height:32px; margin:0 auto; padding:4px 0; color:#222; font-weight:700; cursor:pointer; user-select:none; }
     .scene-nav summary::-webkit-details-marker { display:none; }
-    .scene-nav summary::before { content:"☰"; margin-right:6px; font-size:12px; }
+    .scene-nav summary::after { content:"展开"; color:#777; font-size:12px; font-weight:400; }
+    .scene-nav summary:hover { color:#555; }
     .scene-nav[open] { box-shadow:0 6px 18px rgba(0,0,0,.1); }
-    .scene-nav nav { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:0 16px; max-height:48vh; margin-top:8px; overflow:auto; }
-    .scene-nav .index-link { padding:5px 0; border-bottom:1px solid #ececec; }
-    .scene-nav .index-page { display:inline-block; margin-right:6px; color:#777; font-size:12px; }
-    .scene-nav .index-link.current { font-weight:700; border-left:3px solid #222; padding-left:8px; }
+    .scene-nav[open] summary::after { content:"收起"; }
+    .scene-nav nav { display:grid; grid-template-columns:repeat(auto-fill, minmax(245px, 1fr)); gap:0 16px; box-sizing:border-box; width:100%; max-width:920px; max-height:56vh; margin:8px auto 0; overflow:auto; background:#fff; }
+    .scene-nav .index-link { padding:6px 0; border-bottom:1px solid #ececec; color:#222; }
+    .scene-nav .index-link:hover { color:#555; }
+    .scene-nav .index-link:focus-visible { outline:1px solid #777; outline-offset:2px; }
+    .scene-nav .emph { display:inline-block; min-width:74px; color:#111; }
+    .scene-nav .index-page { display:inline-block; min-width:78px; margin-right:6px; color:#7a7166; font-size:12px; }
     @media screen and (max-width: 720px) {
-      body { padding:0 16px 44px; font-size:16px; line-height:1.72; }
+      body { padding:50px 16px 44px; font-size:16px; line-height:1.72; }
       h1 { font-size:27px; }
       h2 { margin:30px 0 14px; font-size:20px; }
       .cover { min-height:64vh; }
@@ -53,9 +66,9 @@
       .note { margin-left:0; }
       .proper { white-space:normal; }
       .index-link { padding:8px 0; }
-      .scene-nav { margin:0 -16px 16px; padding:6px 16px; font-size:13px; }
-      .scene-nav summary { min-height:24px; padding:1px 8px; font-size:12px; }
-      .scene-nav nav { grid-template-columns:1fr; max-height:52vh; }
+      .scene-nav { width:calc(100% - 32px); padding:6px 0; background:#fff; font-size:13px; }
+      .scene-nav summary { min-height:30px; padding:3px 0; font-size:13px; }
+      .scene-nav nav { grid-template-columns:1fr; max-height:62vh; }
     }
     @media screen and (max-width: 420px) {
       body { padding-left:12px; padding-right:12px; font-size:15.5px; }
@@ -65,6 +78,7 @@
       .scene-no { font-size:13px; }
       .dialogue { margin-left:8px; padding-left:10px; }
       .tag { font-size:12px; }
+      .scene-nav { width:calc(100% - 24px); }
     }
     @media print {
       .screen-only, .scene-nav { display:none !important; }
@@ -72,89 +86,10 @@
     }
   </style>
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const sceneNav = document.getElementById("sceneNav");
-      const sceneLinks = document.querySelectorAll(".index-link");
-      const scenes = document.querySelectorAll(".scene");
-      const storageKey = "tvglow-last-scene";
-
-      const getSavedScene = () => {
-        try {
-          return localStorage.getItem(storageKey);
-        } catch {
-          return null;
-        }
-      };
-
-      const saveScene = (id) => {
-        try {
-          localStorage.setItem(storageKey, id);
-        } catch {
-          // Reading still works if browser storage is unavailable.
-        }
-      };
-
-      const setCurrentLink = (id) => {
-        sceneLinks.forEach((link) => {
-          const isCurrent = link.getAttribute("href") === `#${id}`;
-          link.classList.toggle("current", isCurrent);
-          if (isCurrent) {
-            link.setAttribute("aria-current", "location");
-          } else {
-            link.removeAttribute("aria-current");
-          }
-        });
-      };
-
-      const closeNavOnOutsideEvent = (event) => {
-        const openNav = document.querySelector(".scene-nav[open]");
-        const target = event.target;
-        if (openNav && target instanceof Node && !openNav.contains(target)) {
-          openNav.removeAttribute("open");
-        }
-      };
-
-      if ("PointerEvent" in window) {
-        document.addEventListener("pointerdown", closeNavOnOutsideEvent, true);
-      } else {
-        document.addEventListener("mousedown", closeNavOnOutsideEvent, true);
-        document.addEventListener("touchstart", closeNavOnOutsideEvent, true);
-      }
-
-      sceneLinks.forEach((link) => {
-        link.addEventListener("click", () => {
-          sceneNav?.removeAttribute("open");
-        });
-      });
-
-      const savedScene = getSavedScene();
-      if (savedScene && !location.hash) {
-        setTimeout(() => {
-          document.getElementById(savedScene)?.scrollIntoView();
-          setCurrentLink(savedScene);
-        }, 100);
-      } else if (location.hash) {
-        setCurrentLink(location.hash.slice(1));
-      }
-
-      if ("IntersectionObserver" in window) {
-        const sceneObserver = new IntersectionObserver(
-          (entries) => {
-            entries.forEach((entry) => {
-              if (!entry.isIntersecting) return;
-              const id = entry.target.id;
-              saveScene(id);
-              setCurrentLink(id);
-            });
-          },
-          {
-            rootMargin: "-20% 0px -70% 0px"
-          }
-        );
-
-        scenes.forEach((scene) => {
-          sceneObserver.observe(scene);
-        });
+    document.addEventListener("click", (event) => {
+      const nav = document.querySelector(".scene-nav[open]");
+      if (nav && !nav.contains(event.target)) {
+        nav.removeAttribute("open");
       }
     });
   </script>
@@ -163,10 +98,50 @@
 
 
   <section class="cover">
-    <h1>荧屏在发光<br>官方剧本</h1>
+    <p class="meta">中文剧本学习版</p>
+    <h1>荧屏在发光</h1>
+    <div class="title-page-info">
+      <p><span class="term">WHITE draft 5.31.22</span>：白稿，2022 年 5 月 31 日。</p>
+      <p>片名：荧屏在发光（原文：I Saw the TV Glow）</p>
+      <p>编剧：简·申布伦（原文：Jane Schoenbrun）</p>
+    </div>
+    <p class="rights">本中文剧本学习版仅供个人学习与研究使用，请勿商用或公开传播。</p>
   </section>
 
-  <details class="scene-nav screen-only" id="sceneNav">
+
+  <section class="page front-section">
+    <h2>阅读说明</h2>
+    <p>本译注按英文剧本标记页码组织，方便与原 PDF 对照；标题页不计入正文页码。场次编号来自英文原剧本左右边栏，可能跳号、保留删场，或出现 <span class="term">pt2</span>、<span class="term">pt3</span> 这类同场分段后缀。</p>
+    <p><span class="proper">下划线</span>用于人物、地点、节目名等专名；<span class="emph">加粗</span>用于音效、银幕重点或剧本强调；<span class="term">斜体</span>用于英文剧本术语、缩写或格式说明。</p>
+    <p><span class="tag">字幕匹配</span>表示剧本对白与参考字幕大致对应；<span class="tag">字幕差异</span>表示剧本和成片字幕表达或位置不同；<span class="tag">字幕未见</span>表示剧本有，但字幕中未找到对应台词或成片段落。</p>
+    <h3>本剧本出现的专业术语</h3>
+    <ul class="term-list">
+      <li><span class="term">INT.</span> / 内景</li>
+      <li><span class="term">EXT.</span> / 外景</li>
+      <li><span class="term">V.O.</span> / 旁白、画外叙述</li>
+      <li><span class="term">O.S.</span> / 离画</li>
+      <li><span class="term">CONT&#x27;D</span> / 续</li>
+      <li><span class="term">MORE</span> / 下页续</li>
+      <li><span class="term">OMITTED</span> / 本场删去</li>
+      <li><span class="term">CUT TO</span> / 切至</li>
+      <li><span class="term">HARD CUT TO</span> / 硬切至</li>
+      <li><span class="term">INSERT SHOT</span> / 插入镜头</li>
+      <li><span class="term">TITLE ON SCREEN</span> / 屏幕字幕</li>
+      <li><span class="term">DAY FOR NIGHT</span> / 日拍夜</li>
+    </ul>
+  </section>
+
+
+  <section class="page front-section">
+    <h2>导读</h2>
+    <p>《荧屏在发光》的剧本很适合当作一份关于观看、记忆与自我迟到的文本来读。它表面上围绕一档深夜青少年节目《粉红欧贝》展开，真正推动人物的却不是节目设定本身，而是欧文如何在许多年里把“看见过的东西”一点点压回现实生活的缝隙中。剧本里的电视、学校、郊区街道、电影院和娱乐中心，都是看似普通却不断漏光的空间。</p>
+    <p>前半部的阅读重点，是少年欧文和麦迪怎样通过《粉红欧贝》建立秘密连接。剧本保留了许多成片字幕难以完全承载的动作、停顿和环境细节：体育馆降落伞下的粉色穹顶，投票夜的学校，地下室里的录像带，深夜节目带来的惊吓与亲密感。这里的“字幕未见”往往不是无关枝节，而是在补出欧文的拘谨、麦迪的主动、以及两人把电视节目当成逃生通道的方式。</p>
+    <p>中段开始，剧中剧和现实越来越难分。《粉红欧贝》里的伊莎贝尔、塔拉、忧郁先生、午夜领域，不再只是欧文爱看的节目，而像是一套他无法承认的真实语法。剧本的场景编号、删场、插入镜头和屏幕文字让这种错位更明显：我们看到的是一个人在现实生活里继续行动，同时又不断被另一个叙事召回。读到麦迪讲述自己被活埋、醒来、返回“真正世界”的段落时，可以留意剧本如何让大段对白承担告白、神话解释和情感召唤三种功能。</p>
+    <p>后半部的成人欧文不是简单的“长大之后”，而是一个把选择延后太久的人。电影院、郊区房子、流媒体重看《粉红欧贝》、娱乐中心生日派对，这些地方越日常，越显出窒息。剧本结尾反复出现道歉、喘不过气、无法求救和重新回到洗手间的动作，把恐怖感从怪物转移到生活本身。它最刺痛的地方，正是欧文似乎一直知道门在哪里，却始终没有真正走过去。</p>
+    <p>阅读本版时，可以把字幕标签当作对照坐标，而不是质量判断。<span class="tag">字幕匹配</span>多是成片保留的关键对白；<span class="tag">字幕差异</span>常见于剧本和字幕的表达取舍；<span class="tag">字幕未见</span>则保留了剧本中更多的心理铺垫、动作气氛和被压缩的现实细节。也就是说，这份剧本比字幕呈现出更完整的阅读路径：它让我们看见角色不是突然崩溃，而是在一页又一页里逐渐失去呼吸。</p>
+  </section>
+
+  <details class="scene-nav screen-only">
     <summary>场次索引</summary>
     <nav aria-label="场次索引">
       <a class="index-link" href="#scene-1"><span class="emph">【场 1】</span> <span class="index-page">剧本第 1 页</span>内景 <span class="proper">体育馆</span> 日</a>
@@ -343,13 +318,6 @@
   </details>
 
   <section class="page">
-
-    <div class="note intro-note">
-      <span class="note-title">阅读说明</span>：本译注按英文剧本标记页码组织，方便与原 PDF 对照；标题页不计入正文页码。场次编号来自英文原剧本左右边栏，可能跳号、保留删场，或出现 <span class="term">pt2</span>、<span class="term">pt3</span> 这类同场分段后缀。<br/>
-      <span class="proper">下划线</span>：人物、地点、节目名等专名。<span class="emph">加粗</span>：音效、银幕重点、剧本全大写强调。<span class="term">斜体</span>：英文剧本术语、缩写或格式说明。<br/>
-      <span class="tag">字幕匹配</span>：与参考字幕大致对应。<span class="tag">字幕差异</span>：剧本和成片字幕表达或位置不同。<span class="tag">字幕未见</span>：剧本有，字幕中未找到对应台词或成片段落。<br/>
-      <span class="note-title">术语速览</span>：<span class="term">INT.</span> 为内景，<span class="term">EXT.</span> 为外景；<span class="term">CUT TO</span> 表示切至，<span class="term">INSERT SHOT</span> 表示插入镜头，<span class="term">V.O.</span> 为旁白或画外叙述，声音通常不来自当前画面内可见人物；<span class="term">O.S.</span> 为离画声，角色在同一场景空间内但不在画面中；<span class="term">CONT'D</span> 表示同一角色对白延续，<span class="term">MORE</span> 表示对白跨页未完，<span class="term">OMITTED</span> 表示原剧本中标记的删场。
-    </div>
 <p class="action"><span class="term">WHITE draft 5.31.22</span>：白稿，2022 年 5 月 31 日。</p>
     <p class="action">片名：<span class="proper">荧屏在发光</span></p>
     <p class="action">编剧：<span class="proper">简·申布伦</span></p>
@@ -1483,7 +1451,7 @@
     <p class="action">我们看乐队演了一会儿，听到歌曲中相当一段。</p>
     <div class="dialogue"><span class="speaker"><span class="proper">主唱</span>（续）</span><span class="tag">字幕差异</span> ♪ 我听见静电声 // 直到耳朵被刺穿 ♪</div>
     <p class="action">以及副歌：</p>
-    <div class="dialogue"><span class="speaker"><span class="proper">主唱</span>（续）</span><span class="tag">字幕差异</span> ♪ 夜晚 // 夜晚 // 日拍夜 // 夜晚 // 夜晚 // 日拍夜 ♪</div>
+    <div class="dialogue"><span class="speaker"><span class="proper">主唱</span>（续）</span><span class="tag">字幕差异</span> ♪ 夜里 // 夜里 // 白日如夜 // 夜里 // 夜里 // 白日如夜 ♪</div>
     <div class="note"><span class="note-title">差异</span>：成片字幕使用完整歌曲段落；剧本这里只写出几句提示性歌词。此处按剧本可见歌词翻译，不补入成片额外歌词。</div>
     <p class="action">最后，我们<span class="term">CUT TO</span>：切至：</p>
     <p class="action">角落卡座。<span class="proper">欧文</span>和<span class="proper">麦迪</span>面对面坐着，面前各有饮料。</p>
