@@ -398,7 +398,10 @@ const height = window.innerHeight;
 
 const zoom = d3.zoom()
   .scaleExtent([0.2, 4])
-  .on('zoom', e => root.attr('transform', e.transform));
+  .on('zoom', e => {
+    root.attr('transform', e.transform);
+    if (!highlightOn) applyLabelVisibility(e.transform.k);
+  });
 
 svg.call(zoom);
 
@@ -515,10 +518,14 @@ nodeEl.append('circle')
   .attr('stroke-width', 1.5)
   .attr('stroke-opacity', 0.28);
 
-// 在移动端，默认只显示「锚点」类标签（城市/厂牌/乐队），其余在高亮时再显示，避免小屏文字糊成一团
+// 标签精简：缩得太小看不清时，只保留「锚点」类标签（城市/厂牌/乐队），放大后再显示全部
+// 这样移动端聚焦局部时标签清晰可读，缩放总览时又不会糊成一团
 const ANCHOR_LABEL = new Set(['City', 'Label', 'Band']);
-function showLabelByDefault(d) {
-  return isMobile() ? ANCHOR_LABEL.has(d.type) : true;
+let highlightOn = false;
+function applyLabelVisibility(scale) {
+  if (scale == null) scale = d3.zoomTransform(svg.node()).k;
+  const showMinor = scale >= 0.55;
+  nodeEl.selectAll('text').style('display', n => (showMinor || ANCHOR_LABEL.has(n.type)) ? null : 'none');
 }
 
 nodeEl.append('text')
@@ -527,8 +534,7 @@ nodeEl.append('text')
   .attr('text-anchor', 'middle')
   .attr('font-size', d => d.type === 'Label' ? (isMobile() ? 11 : 10) : (isMobile() ? 10 : 9))
   .attr('fill', d => d.type === 'City' ? '#7ab87a' : '#b0aaa0')
-  .attr('letter-spacing', '0.04em')
-  .style('display', d => showLabelByDefault(d) ? null : 'none');
+  .attr('letter-spacing', '0.04em');
 
 // Tooltip & highlight
 const tooltip = document.getElementById('tooltip');
@@ -551,9 +557,10 @@ function highlightNode(d) {
   linkEl.classed('dimmed', l => (l.source.id || l.source) !== d.id && (l.target.id || l.target) !== d.id);
   linkEl.classed('highlighted', l => (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id);
 
-  // 高亮时把相关节点的标签全部显示出来（移动端默认隐藏了次要标签）
+  // 高亮时把相关节点的标签显示出来（连同始终可见的锚点标签）
+  highlightOn = true;
   nodeEl.selectAll('text').style('display', n =>
-    (connected.has(n.id) || showLabelByDefault(n)) ? null : 'none');
+    (connected.has(n.id) || ANCHOR_LABEL.has(n.type)) ? null : 'none');
 
   ttName.textContent = d.label;
   ttType.textContent = `${typeZH[d.type]}`;
@@ -565,8 +572,9 @@ function highlightNode(d) {
 function clearHighlight() {
   nodeEl.classed('dimmed', false).classed('highlighted', false);
   linkEl.classed('dimmed', false).classed('highlighted', false);
-  // 还原默认标签可见性
-  nodeEl.selectAll('text').style('display', n => showLabelByDefault(n) ? null : 'none');
+  // 还原为按当前缩放比例决定的标签可见性
+  highlightOn = false;
+  applyLabelVisibility();
   tooltip.classList.remove('show');
 }
 
@@ -608,8 +616,8 @@ sim.on('tick', () => {
 });
 
 // 统计
-document.getElementById('node-count').textContent = isMobile() ? '点节点看关系' : '悬停查看关系';
-document.getElementById('link-count').textContent = isMobile() ? '点空白清除' : '点击查看详情';
+document.getElementById('node-count').textContent = isMobile() ? '拖动浏览全图' : '悬停查看关系';
+document.getElementById('link-count').textContent = isMobile() ? '点节点看关系' : '点击查看详情';
 
 // 自适应缩放：根据所有节点的包围盒，把整张网络缩放/平移到视口内（留出边距）
 // 取代固定缩放——节点变多后能保证移动端首屏就能看到全貌
@@ -631,19 +639,45 @@ function fitView(duration = 0) {
   (duration ? svg.transition().duration(duration) : svg).call(zoom.transform, t);
 }
 
-// 力导向收敛后自动适配一次首屏视图
+// 焦点节点：连接最密集的枢纽（多为某座城市或核心厂牌），作为移动端的引导入口
+function computeFocusNode() {
+  const deg = {};
+  filteredLinks.forEach(l => {
+    const s = l.source.id || l.source, t = l.target.id || l.target;
+    deg[s] = (deg[s] || 0) + 1; deg[t] = (deg[t] || 0) + 1;
+  });
+  let best = null, bestDeg = -1;
+  filteredNodes.forEach(n => { const d = deg[n.id] || 0; if (d > bestDeg) { bestDeg = d; best = n; } });
+  return best;
+}
+const focusNode = computeFocusNode();
+
+// 入口视图：
+// - 桌面端：自适应铺满全图（空间足够、可悬停）
+// - 移动端：以接近真实大小的比例聚焦到枢纽节点附近，只露出局部，引导用户拖拽探索
+function entryView(duration = 0) {
+  if (!isMobile()) return fitView(duration);
+  const f = focusNode;
+  if (!f || f.x == null) return fitView(duration);
+  const w = window.innerWidth, h = window.innerHeight;
+  const scale = 1.05;
+  const t = d3.zoomIdentity.translate(w / 2, h / 2).scale(scale).translate(-f.x, -f.y);
+  (duration ? svg.transition().duration(duration) : svg).call(zoom.transform, t);
+}
+
+// 力导向收敛后自动定位一次入口视图
 let fittedOnce = false;
-sim.on('end', () => { if (!fittedOnce) { fittedOnce = true; fitView(0); } });
-// 兜底：即使迟迟未触发 end，也在短暂预热后先适配一次
-setTimeout(() => fitView(0), 1200);
+sim.on('end', () => { if (!fittedOnce) { fittedOnce = true; entryView(0); } });
+// 兜底：即使迟迟未触发 end，也在短暂预热后先定位一次
+setTimeout(() => entryView(0), 1200);
 
 // 控制按钮
 document.getElementById('btn-zoom-in').addEventListener('click', () =>
   svg.transition().call(zoom.scaleBy, 1.4));
 document.getElementById('btn-zoom-out').addEventListener('click', () =>
   svg.transition().call(zoom.scaleBy, 0.7));
-// 重置 = 重新适配全图
-document.getElementById('btn-reset').addEventListener('click', () => fitView(600));
+// 重置 = 回到入口视图（桌面铺满全图 / 移动端回到枢纽）
+document.getElementById('btn-reset').addEventListener('click', () => entryView(600));
 
 
 // ── Scene 叠加 ──
@@ -698,14 +732,13 @@ window.addEventListener('resize', () => {
   // 跨断点时重算与移动端相关的视觉量
   nodeEl.select('circle.dot').attr('r', nodeRadius);
   nodeEl.select('circle.hit').attr('r', d => nodeRadius(d) + (isMobile() ? 16 : 8));
-  nodeEl.select('text')
-    .attr('dy', d => nodeRadius(d) + 11)
-    .style('display', d => showLabelByDefault(d) ? null : 'none');
-  document.getElementById('node-count').textContent = isMobile() ? '点节点看关系' : '悬停查看关系';
-  document.getElementById('link-count').textContent = isMobile() ? '点空白清除' : '点击查看详情';
+  nodeEl.select('text').attr('dy', d => nodeRadius(d) + 11);
+  if (!highlightOn) applyLabelVisibility();
+  document.getElementById('node-count').textContent = isMobile() ? '拖动浏览全图' : '悬停查看关系';
+  document.getElementById('link-count').textContent = isMobile() ? '点节点看关系' : '点击查看详情';
   sim.alpha(0.2).restart();
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => fitView(400), 350);
+  resizeTimer = setTimeout(() => entryView(400), 350);
 });
 </script>
 </body>
