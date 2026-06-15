@@ -90,6 +90,7 @@
     opacity: 0;
     transition: opacity 0.15s;
   }
+  #tooltip.show { opacity: 1; }
 
   #tooltip .tt-name {
     font-size: 13px;
@@ -284,7 +285,20 @@
 
     #info { bottom: 12px; left: 12px; font-size: 9px; z-index: 5; }
 
-    #tooltip { max-width: calc(100vw - 32px); font-size: 12px; }
+    /* 移动端：详情提示改为贴底抽屉，避免漂浮在手指下、被边缘裁切 */
+    #tooltip {
+      left: 0 !important; right: 0; top: auto !important;
+      bottom: 0;
+      max-width: none; width: 100%;
+      border: none; border-top: 1px solid #333;
+      padding: 14px 18px calc(14px + env(safe-area-inset-bottom, 0px));
+      font-size: 12.5px; line-height: 1.7;
+      transform: translateY(100%);
+      transition: transform 0.2s ease, opacity 0.15s;
+      box-shadow: 0 -8px 24px rgba(0,0,0,0.5);
+    }
+    #tooltip.show { transform: translateY(0); }
+    #tooltip .tt-detail { font-size: 12px; }
 
     .node text { font-size: 11px; }
   }
@@ -356,205 +370,8 @@ const LINK_COLORS = {
 };
 
 // ── 数据 ──
-const nodes = [
-  // 厂牌
-  { id:'sst',           label:'SST Records',       type:'Label',  chapter:1, detail:'Greg Ginn 创立；旗下：Black Flag、The Minutemen、Hüsker Dü、Sonic Youth、Dinosaur Jr 等' },
-  { id:'dischord',      label:'Dischord Records',  type:'Label',  chapter:4, detail:'MacKaye & Nelson 创立；D.C. 场景核心厂牌；只发行本地乐队' },
-  { id:'touch_go',      label:'Touch & Go',        type:'Label',  chapter:3, detail:'Tesco Vee 创立，Corey Rusk 接手；旗下：Big Black、Butthole Surfers' },
-  { id:'sub_pop',       label:'Sub Pop Records',   type:'Label',  chapter:1, detail:'西雅图；旗下：Mudhoney' },
-  { id:'new_alliance',  label:'New Alliance',      type:'Label',  chapter:2, detail:'Watt & D. Boon 创立；D. Boon 去世后卖给 Ginn' },
-  { id:'columbia',      label:'Columbia Records',  type:'Label',  chapter:2, detail:'主流厂牌；fIREHOSE 后期签约' },
-
-  // 乐队
-  { id:'black_flag',    label:'Black Flag',        type:'Band',   chapter:1, detail:'洛杉矶；建立全国巡演网络与 SST 发行体系的先驱' },
-  { id:'minutemen',     label:'The Minutemen',     type:'Band',   chapter:2, detail:'圣佩德罗；jam econo 哲学；D. Boon 1985年去世后解散' },
-  { id:'reactionaries', label:'The Reactionaries', type:'Band',   chapter:2, detail:'Minutemen 前身；存续约七个月（1979–1980）' },
-  { id:'firehose',      label:'fIREHOSE',          type:'Band',   chapter:2, detail:'Minutemen 解散后由 Watt & Hurley 组建' },
-  { id:'sonic_youth',   label:'Sonic Youth',       type:'Band',   chapter:1, detail:'纽约下东区；SST → Capitol；离开后 SST 加速衰落' },
-  { id:'husker_du',     label:'Hüsker Dü',         type:'Band',   chapter:5, detail:'圣保罗；SST→Warner/Reprise；首支签主流的核心独立乐队；Mould vs Hart 内部张力；1987年无声明解散' },
-  { id:'fugazi',        label:'Fugazi',            type:'Band',   chapter:4, detail:'D.C.；Dischord；拒绝一切商业妥协；票价始终极低' },
-  { id:'minor_threat',  label:'Minor Threat',      type:'Band',   chapter:4, detail:'D.C.；Dischord；straight edge 发源地；两年二十五首歌' },
-  { id:'teen_idles',    label:'Teen Idles',        type:'Band',   chapter:4, detail:'Minor Threat 前身；发明手背画 X 的 straight edge 视觉符号' },
-  { id:'soa',           label:'S.O.A.',            type:'Band',   chapter:4, detail:'Henry Garfield（Rollins）主唱；D.C. 早期硬核' },
-  { id:'bad_brains',    label:'Bad Brains',        type:'Band',   chapter:4, detail:'D.C.；MacKaye 的精神偶像；H.R. 劝说 MacKaye 重组 Minor Threat' },
-  { id:'youth_brigade', label:'Youth Brigade',     type:'Band',   chapter:4, detail:'Nathan Strejcek 组建；与 Minor Threat 同行1981年跨州巡演' },
-  { id:'govt_issue',    label:'Government Issue',  type:'Band',   chapter:4, detail:'Brian Baker 于 Minor Threat 第一次解散期间加入' },
-  { id:'necros',        label:'The Necros',        type:'Band',   chapter:3, detail:'俄亥俄托莱多；与 Touch & Go 深度关联；Corey Rusk 为贝斯手' },
-  { id:'mission_burma', label:'Mission of Burma',  type:'Band',   chapter:3, detail:'波士顿；比基础设施早了十年的"超前"乐队；耳鸣导致解散' },
-  { id:'ace_of_hearts', label:'Ace of Hearts Records', type:'Label', chapter:3, detail:'波士顿；Mission of Burma 所属厂牌' },
-  { id:'mudhoney',      label:'Mudhoney',          type:'Band',   chapter:1, detail:'西雅图；Sub Pop 旗下' },
-  { id:'reprise',        label:'Reprise/Warner',    type:'Label',  chapter:5, detail:'Warner Brothers 旗下；首家签下核心独立乐队的主流厂牌；给予完全创作控制权' },
-  { id:'bob_mould',      label:'Bob Mould',         type:'Person', chapter:5, detail:'Hüsker Dü 吉他/主唱；强硬不妥协；签约后戒酒；Savoy 死后独自担任乐队经理' },
-  { id:'grant_hart',     label:'Grant Hart',        type:'Person', chapter:5, detail:'Hüsker Dü 鼓手/主唱；偏流行感性；海洛因成瘾；1986年查出 HIV 阳性未告知乐队' },
-  { id:'greg_norton',    label:'Greg Norton',       type:'Person', chapter:5, detail:'Hüsker Dü 贝斯手；自称"温水"，刻意不介入 Mould-Hart 争斗' },
-  { id:'david_savoy',    label:'David Savoy',       type:'Person', chapter:5, detail:'Hüsker Dü 经理；Mould 密友；1987年春巡演前夕跳桥自杀，时年24岁' },
-  { id:'city_minneapolis', label:'明尼阿波利斯/圣保罗', type:'City', chapter:5, detail:'Hüsker Dü 大本营；中西部朋克网络核心城市之一' },
-  { id:'city_austin',     label:'奥斯汀/德克萨斯',   type:'City',   chapter:8, detail:'Butthole Surfers 定居地（1986年）；六十年代迷幻场景遗产；游离于地下文化主流之外的怪异变体' },
-  { id:'city_chicago',    label:'芝加哥',            type:'City',   chapter:9, detail:'Big Black 大本营；Touch & Go 总部；种族高度分裂的城市——对 Albini 歌词产生直接影响' },
-
-  // 第九章
-  { id:'big_black',       label:'Big Black',         type:'Band',   chapter:9, detail:'芝加哥；Touch & Go；工业摇滚蓝图；1987年全盛期主动解散；最后一场演出影响 Sub Pop 方向' },
-  { id:'albini',          label:'Steve Albini',      type:'Person', chapter:9, detail:'Big Black 吉他/主唱；朋克存在主义定义者；后录制 Pixies/PJ Harvey/Nirvana 等；"价值来自内部，不需要被允许加入"' },
-  { id:'dave_riley',      label:'Dave Riley',        type:'Person', chapter:9, detail:'Big Black 贝斯（接替 Pezzati）；底特律出身；曾在录制 George Clinton/Sly Stone 的录音室工作' },
-  { id:'mark_arm',        label:'Mark Arm',          type:'Person', chapter:9, detail:'Mudhoney 主唱；Green River 成员；Big Black 最后一场演出台下第一排；Sub Pop 场景核心' },
-
-  // 第十二章
-  { id:'green_river',     label:'Green River',        type:'Band',   chapter:12, detail:'Mudhoney 与 Pearl Jam 的共同前身；1987年万圣节解散；Arm 的朋克方向 vs Ament/Gossard 的主流抱负' },
-  { id:'tad',             label:'TAD',                type:'Band',   chapter:12, detail:'西雅图；Sub Pop 早期核心乐队；Pepsi 商标诉讼拖累 Sub Pop 财务' },
-  { id:'pavitt',          label:'Bruce Pavitt',       type:'Person', chapter:12, detail:'Sub Pop 联合创始人；"自嘲作为营销防御"策略；财务危机中在 Turner 面前哭泣' },
-  { id:'poneman',         label:'Jonathan Poneman',   type:'Person', chapter:12, detail:'Sub Pop 联合创始人；"Pavitt 是Sub，Poneman 是Pop"；托莱多出身，华盛顿大学' },
-  { id:'charles_peterson',label:'Charles Peterson',   type:'Person', chapter:12, detail:'Sub Pop 御用摄影师；建立西雅图场景视觉语言；把几十人的演出拍成大事件' },
-  { id:'jack_endino',     label:'Jack Endino',        type:'Person', chapter:12, detail:'西雅图录音师；录制 Mudhoney/Nirvana 早期作品；Sub Pop 核心录音师' },
-  { id:'steve_turner',    label:'Steve Turner',       type:'Person', chapter:12, detail:'Mudhoney 吉他手；Green River 旧部；"我们是一个注脚"' },
-
-  // 第十章
-  { id:'dinosaur_jr',     label:'Dinosaur Jr',       type:'Band',   chapter:10, detail:'阿默斯特；Homestead→SST；音量作为意义本身；Mascis 用沉默压垮 Barlow；Dont 让 Barlow 咳血' },
-  { id:'mascis',          label:'J Mascis',           type:'Person', chapter:10, detail:'Dinosaur Jr 核心；"想要音量震动身体和思维"；用沉默和漠然作为权力工具；内向到极端' },
-
-  // 第十一章
-  { id:'rites_of_spring', label:'Rites of Spring',    type:'Band',   chapter:11, detail:'Fugazi 前身之一；D.C. 情感硬核早期代表；Picciotto/Canty 参与；几乎未走出 D.C.' },
-  { id:'embrace',         label:'Embrace',            type:'Band',   chapter:11, detail:'Minor Threat 解散后 MacKaye 的过渡乐队；几乎未走出 D.C.' },
-  { id:'picciotto',       label:'Guy Picciotto',      type:'Person', chapter:11, detail:'Fugazi 主唱/吉他；加入吉他后推动真正集体创作；"正因为我们是点唱机，并不意味着我们放弃了言论权"' },
-  { id:'joe_lally',       label:'Joe Lally',          type:'Person', chapter:11, detail:'Fugazi 贝斯手；dub 影响风格；与 MacKaye 构成乐队节奏基础' },
-  { id:'brendan_canty',   label:'Brendan Canty',      type:'Person', chapter:11, detail:'Fugazi 鼓手；Rites of Spring 成员；父母为民权运动参与者；视 Fugazi 为民权精神延续' },
-  { id:'mark_andersen',   label:'Mark Andersen',      type:'Person', chapter:11, detail:'Positive Force D.C. 主要组织者；组织 Fugazi 所有本地演出' },
-  { id:'positive_force',  label:'Positive Force DC',  type:'Project',chapter:11, detail:'朋克背景政治行动组织；组织 Fugazi 本地演出；联络乐队与受益社区组织' },
-  { id:'barlow',          label:'Lou Barlow',         type:'Person', chapter:10, detail:'Dinosaur Jr 贝斯；"I am Lou, I am nothing"；被迫唱Why dont you like me至咳血；后创立 Sebadoh' },
-  { id:'murph',           label:'Murph',              type:'Person', chapter:10, detail:'Dinosaur Jr 鼓手；"嬉皮朋克"；与 straight edge 的 Mascis/Barlow 文化格格不入' },
-  { id:'homestead',       label:'Homestead Records',  type:'Label',  chapter:10, detail:'独立厂牌；Dinosaur Jr 早期旗下；Gerard Cosloy 运营' },
-  { id:'city_amherst',    label:'阿默斯特/北安普顿',  type:'City',   chapter:10, detail:'马萨诸塞五大学区；Dinosaur Jr 发源地；富裕大学城文化背景' },
-  { id:'ruthless',        label:'Ruthless Records',  type:'Label',  chapter:9, detail:'Big Black 自创早期厂牌；后转至 Touch & Go' },
-
-  // 第八章
-  { id:'butthole_surfers',label:'Butthole Surfers',  type:'Band',   chapter:8, detail:'德克萨斯；Touch&Go→Capitol；边界测试者；"台上台下无分界线"；DIY 可承载任何内容的证明' },
-  { id:'gibby_haynes',    label:'Gibby Haynes',      type:'Person', chapter:8, detail:'Butthole Surfers 主唱；前会计师事务所职员；"二十四小时完全无法管理的醉汉"' },
-  { id:'paul_leary',      label:'Paul Leary',        type:'Person', chapter:8, detail:'Butthole Surfers 吉他；艺术学院 Zappa 迷；"我们是完全没有才华的乐队"' },
-  { id:'king_coffey',     label:'King Coffey',       type:'Person', chapter:8, detail:'Butthole Surfers 鼓手；最清醒的记录者；"我宁愿在纽约演出也不愿去给别人洗盘子"' },
-  { id:'jello_biafra',    label:'Jello Biafra',      type:'Person', chapter:8, detail:'Dead Kennedys 主唱；Alternative Tentacles 创始人；将 Butthole Surfers demo 传递给 Corey Rusk' },
-  { id:'mark_kramer',     label:'Mark Kramer',       type:'Person', chapter:8, detail:'Shockabilly 贝斯手；纽约东村场景人物；Butthole Surfers 进入纽约场景的中间人' },
-
-  // 第六章
-  { id:'replacements',   label:'The Replacements', type:'Band',   chapter:6, detail:'明尼阿波利斯；Twin/Tone→Warner/Sire；自毁美学；1991年解散' },
-  { id:'twin_tone',      label:'Twin/Tone Records', type:'Label', chapter:6, detail:'明尼阿波利斯独立厂牌；与 Replacements 无合同运营；Paul Stark & Peter Jesperson 创立' },
-  { id:'westerberg',     label:'Paul Westerberg',  type:'Person', chapter:6, detail:'Replacements 主唱/词曲；天赋极强，以自毁为美学；最终坦承"我们不够拼命"' },
-  { id:'bob_stinson',    label:'Bob Stinson',       type:'Person', chapter:6, detail:'Replacements 吉他手；"最蠢的天才或最聪明的白痴"；1986年被开除；1995年死亡，时年35岁' },
-  { id:'tommy_stinson',  label:'Tommy Stinson',     type:'Person', chapter:6, detail:'Replacements 贝斯手；Bob 之弟；加入时年仅13岁' },
-  { id:'chris_mars',     label:'Chris Mars',        type:'Person', chapter:6, detail:'Replacements 鼓手；乐队里最清醒的观察者' },
-  { id:'jesperson',      label:'Peter Jesperson',   type:'Person', chapter:6, detail:'Twin/Tone 联合创始人；Replacements 经理；1986年与 Bob 同年被开除' },
-  { id:'paul_stark',     label:'Paul Stark',        type:'Person', chapter:6, detail:'Twin/Tone 联合创始人；刻意将 Replacements 与商业隔离' },
-
-  // 人物
-  { id:'greg_ginn',     label:'Greg Ginn',         type:'Person', chapter:1, detail:'Black Flag 吉他手；SST 创始人；Raymond Pettibon 之兄' },
-  { id:'dukowski',      label:'Chuck Dukowski',    type:'Person', chapter:1, detail:'Black Flag 贝斯；SST Global Booking 主持；1983年离队' },
-  { id:'rollins',       label:'Henry Rollins',     type:'Person', chapter:1, detail:'Black Flag 主唱（1981年加入）；前身 S.O.A.' },
-  { id:'pettibon',      label:'Raymond Pettibon',  type:'Person', chapter:1, detail:'Greg Ginn 之弟；设计 Black Flag logo；SST 视觉核心' },
-  { id:'watt',          label:'Mike Watt',         type:'Person', chapter:2, detail:'Minutemen 贝斯；"jam econo" 倡导者；New Alliance 联合创始人' },
-  { id:'boon',          label:'D. Boon',           type:'Person', chapter:2, detail:'Minutemen 吉他/主唱；1985年12月23日交通事故去世，享年27岁' },
-  { id:'hurley',        label:'George Hurley',     type:'Person', chapter:2, detail:'Minutemen 鼓手；fIREHOSE 成员；后与 Red Krayola 合作' },
-  { id:'crawford',      label:'Ed Crawford',       type:'Person', chapter:2, detail:'俄亥俄 Minutemen 乐迷；D. Boon 去世后说服 Watt 重新演奏；fIREHOSE 吉他' },
-  { id:'mackaye',       label:'Ian MacKaye',       type:'Person', chapter:4, detail:'Minor Threat 主唱；Fugazi 成员；Dischord 联合创始人；straight edge 提出者' },
-  { id:'nelson',        label:'Jeff Nelson',       type:'Person', chapter:4, detail:'Minor Threat 鼓手；Dischord 联合创始人；手写信封、折叠封套的厂牌苦力' },
-  { id:'preslar',       label:'Lyle Preslar',      type:'Person', chapter:4, detail:'Minor Threat 吉他；Georgetown Day School；曾短暂就读西北大学，结识 Steve Albini' },
-  { id:'baker',         label:'Brian Baker',       type:'Person', chapter:4, detail:'Minor Threat 贝斯；Georgetown Day School；吉他神童' },
-  { id:'strejcek',      label:'Nathan Strejcek',   type:'Person', chapter:4, detail:'Teen Idles 主唱；Dischord 早期联合运营者；后组 Youth Brigade' },
-  { id:'corey_rusk',    label:'Corey Rusk',        type:'Person', chapter:3, detail:'The Necros 贝斯；Touch & Go 实际运营者；磁带网络关键节点' },
-  { id:'joe_carducci',  label:'Joe Carducci',      type:'Person', chapter:1, detail:'SST 销售/推广负责人（1981–1986）；离开后 Ginn 立即邀请 Sonic Youth 加盟' },
-  { id:'durango',       label:'Santiago Durango',  type:'Person', chapter:4, detail:'Big Black 吉他；芝加哥朋克场景核心；曾为 Minor Threat 做音响；后进入法学院' },
-  { id:'albini',        label:'Steve Albini',      type:'Person', chapter:4, detail:'通过 Preslar 室友 Nate Kato 进入网络；后成为 Big Black 核心' },
-  { id:'pettibon_link', label:'Raymond Pettibon',  type:'Person', chapter:1, detail:'见 pettibon' },  // 去重，下面不用
-
-  // 城市
-  { id:'city_la',       label:'洛杉矶',            type:'City',   chapter:1, detail:'Black Flag、SST 大本营；警方持续骚扰促使乐队向外扩张' },
-  { id:'city_sp',       label:'圣佩德罗',          type:'City',   chapter:2, detail:'蓝领港口城市；Minutemen 的原点；距洛杉矶30英里' },
-  { id:'city_dc',       label:'华盛顿特区',        type:'City',   chapter:4, detail:'政府城市；MacKaye 场景；两所高校构成圈子基础' },
-  { id:'city_boston',   label:'波士顿',            type:'City',   chapter:3, detail:'Mission of Burma 大本营' },
-  { id:'city_chicago',  label:'芝加哥',            type:'City',   chapter:3, detail:'Touch & Go 迁入地；O\'Banion\'s 朋克俱乐部' },
-  { id:'city_seattle',  label:'西雅图',            type:'City',   chapter:1, detail:'Sub Pop 大本营；Mudhoney' },
-  { id:'city_ny',       label:'纽约',              type:'City',   chapter:1, detail:'Sonic Youth 发源地；no wave 场景；Glenn Branca 实验音乐圈' },
-
-  // 第七章
-  { id:'geffen',         label:'Geffen/DGC',        type:'Label',  chapter:7, detail:'主流厂牌；Sonic Youth 签约后引入 Nirvana；"磁铁乐队"策略的受益者' },
-  { id:'glenn_branca',   label:'Glenn Branca',       type:'Person', chapter:7, detail:'纽约实验音乐作曲家；吉他六重奏；Ranaldo、Moore 均参与；Gordon 通过其圈子接触音乐' },
-  { id:'kim_gordon',     label:'Kim Gordon',         type:'Person', chapter:7, detail:'Sonic Youth 贝斯/主唱；UCLA 教授之女；艺术策展人出身；"直接进入流行文化的形式，而不只是评论它"' },
-  { id:'thurston_moore', label:'Thurston Moore',     type:'Person', chapter:7, detail:'Sonic Youth 吉他/主唱；关系网络高度自觉；Watt："Thurston 知道这一切的意义，就是通讯"' },
-  { id:'lee_ranaldo',    label:'Lee Ranaldo',        type:'Person', chapter:7, detail:'Sonic Youth 吉他；Branca 六重奏核心成员兼音乐副手；长岛 Deadhead 出身' },
-  { id:'steve_shelley',  label:'Steve Shelley',      type:'Person', chapter:7, detail:'Sonic Youth 鼓手' },
-  { id:'stanton_miranda',label:'Stanton Miranda',    type:'Person', chapter:7, detail:'介绍 Moore 与 Gordon 相识；乐队 CKM 成员包括 Gordon' },
-,
-
-  // 第十章
-  { id:'dinosaur_jr',     label:'Dinosaur Jr',        type:'Band',   chapter:10, detail:'阿默斯特；Homestead→SST；音量即意义；Mascis 用沉默压垮 Barlow' },
-  { id:'mascis',          label:'J Mascis',           type:'Person', chapter:10, detail:'Dinosaur Jr 核心；"想要音量震动身体和思维"；用沉默和漠然作为权力工具' },
-  { id:'barlow',          label:'Lou Barlow',         type:'Person', chapter:10, detail:'Dinosaur Jr 贝斯；"I am Lou, I am nothing"；被迫唱 Why dont you like me 至咳血' },
-  { id:'murph',           label:'Murph',              type:'Person', chapter:10, detail:'Dinosaur Jr 鼓手；自称"嬉皮朋克"' },
-  { id:'homestead',       label:'Homestead Records',  type:'Label',  chapter:10, detail:'纽约；Gerard Cosloy 运营；Dinosaur Jr 早期旗下；Cosloy 离开后逐渐消失' },
-  { id:'city_amherst',    label:'阿默斯特',           type:'City',   chapter:10, detail:'马萨诸塞五大学区；Dinosaur Jr 发源地' },
-
-  // 第十一章
-  { id:'rites_of_spring', label:'Rites of Spring',    type:'Band',   chapter:11, detail:'Fugazi 前身；D.C. 情感硬核早期代表；Picciotto/Canty 参与' },
-  { id:'embrace',         label:'Embrace',            type:'Band',   chapter:11, detail:'Minor Threat 解散后 MacKaye 的过渡乐队' },
-  { id:'picciotto',       label:'Guy Picciotto',      type:'Person', chapter:11, detail:'Fugazi 主唱/吉他；加入吉他后推动真正集体创作' },
-  { id:'joe_lally',       label:'Joe Lally',          type:'Person', chapter:11, detail:'Fugazi 贝斯手；dub 影响风格' },
-  { id:'brendan_canty',   label:'Brendan Canty',      type:'Person', chapter:11, detail:'Fugazi 鼓手；Rites of Spring 成员；父母为民权运动参与者' },
-  { id:'mark_andersen',   label:'Mark Andersen',      type:'Person', chapter:11, detail:'Positive Force D.C. 主要组织者；组织 Fugazi 所有本地演出' },
-  { id:'positive_force',  label:'Positive Force DC',  type:'Project',chapter:11, detail:'朋克背景政治行动组织；组织 Fugazi 本地演出；收益捐给本地社区组织' },
-
-  // 第十二章
-  { id:'green_river',     label:'Green River',        type:'Band',   chapter:12, detail:'Mudhoney 与 Pearl Jam 共同前身；1987年因方向分歧解散' },
-  { id:'pavitt',          label:'Bruce Pavitt',       type:'Person', chapter:12, detail:'Sub Pop 联合创始人；"自嘲作为营销防御"；财务危机中当场哭泣' },
-  { id:'poneman',         label:'Jonathan Poneman',   type:'Person', chapter:12, detail:'Sub Pop 联合创始人；"这座城市欠 Sonic Youth 很多"' },
-  { id:'jack_endino',     label:'Jack Endino',        type:'Person', chapter:12, detail:'西雅图录音师；录制 Mudhoney/Nirvana 早期作品；Sub Pop 核心录音师' },
-  { id:'steve_turner',    label:'Steve Turner',       type:'Person', chapter:12, detail:'Mudhoney 吉他手；Green River 旧部；"我们是一个注脚"' },
-
-  // 第六章（Replacements 补充）
-  { id:'replacements',    label:'The Replacements',   type:'Band',   chapter:6,  detail:'明尼阿波利斯；Twin/Tone→Warner/Sire；自毁美学；1991年解散' },
-  { id:'twin_tone',       label:'Twin/Tone Records',  type:'Label',  chapter:6,  detail:'明尼阿波利斯；Paul Stark & Jesperson 创立；与 Replacements 无合同运营' },
-  { id:'westerberg',      label:'Paul Westerberg',    type:'Person', chapter:6,  detail:'Replacements 主唱/词曲；天赋极强，以自毁为美学；"我们不够拼命"' },
-  { id:'bob_stinson',     label:'Bob Stinson',        type:'Person', chapter:6,  detail:'Replacements 吉他手；1986年被开除；1995年去世，享年35岁' },
-  { id:'jesperson',       label:'Peter Jesperson',    type:'Person', chapter:6,  detail:'Twin/Tone 联合创始人；Replacements 经理；1986年被开除' },
-
-  // 第十三章
-  { id:'beat_happening',  label:'Beat Happening',     type:'Band',   chapter:13, detail:'奥林匹亚；K Records；"不会演奏"作为邀请；twee-pop/riot grrrl 精神起点' },
-  { id:'k_records',       label:'K Records',          type:'Label',  chapter:13, detail:'奥林匹亚；Calvin Johnson 创立；"国际流行地下"；连接苏格兰/澳大利亚/新西兰' },
-  { id:'calvin_johnson',  label:'Calvin Johnson',     type:'Person', chapter:13, detail:'Beat Happening 主唱；K Records 创始人；魅力型场景建设者' },
-  { id:'heather_lewis',   label:'Heather Lewis',      type:'Person', chapter:13, detail:'Beat Happening 主唱/鼓手；歌词切近个人经历' },
-  { id:'bret_lunsford',   label:'Bret Lunsford',      type:'Person', chapter:13, detail:'Beat Happening 吉他手' },
-  { id:'city_olympia',    label:'奥林匹亚',           type:'City',   chapter:13, detail:'K Records 大本营；Beat Happening 发源地；Riot Grrrl 运动震中' },
-
-  // ── 补充实体（来自收集表数据源）──
-  // 遗漏乐队
-  { id:'mogo',            label:'Mogo',               type:'Band',   chapter:10, detail:'Dinosaur Jr 直接前身；首演后数日即解散（阿默斯特，1984）' },
-  { id:'deep_wound',      label:'Deep Wound',         type:'Band',   chapter:10, detail:'Mascis 与 Barlow 的早期硬核乐队（阿默斯特，1982–84）' },
-  { id:'the_coachmen',    label:'The Coachmen',       type:'Band',   chapter:7,  detail:'Thurston Moore 在纽约的早期后朋克乐队（1979–81）' },
-  // 遗漏人物
-  { id:'matt_lukin',      label:'Matt Lukin',         type:'Person', chapter:12, detail:'Mudhoney 贝斯手；前 Melvins 成员；来自阿伯丁' },
-  { id:'dan_peters',      label:'Dan Peters',         type:'Person', chapter:12, detail:'Mudhoney 鼓手；曾短暂加入 Nirvana 录制 Sliver' },
-  // 遗漏厂牌 / 城市
-  { id:'alt_tentacles',   label:'Alternative Tentacles', type:'Label', chapter:8, detail:'旧金山；Jello Biafra 创立的朋克/硬核厂牌' },
-  { id:'city_sf',         label:'旧金山',             type:'City',   chapter:8,  detail:'Alternative Tentacles 所在地' },
-
-  // ── 场地 ──
-  { id:'v_930',        label:'9:30 Club',            type:'Venue', chapter:4,  detail:'华盛顿特区；D.C. 硬核场景核心演出场地；全年龄段政策影响整个场景人员构成' },
-  { id:'v_wilson',     label:'Wilson Center',        type:'Venue', chapter:4,  detail:'华盛顿特区；D.C. 早期全年龄段演出空间（1980–83）' },
-  { id:'v_tropicana',  label:'Tropicana',            type:'Venue', chapter:13, detail:'奥林匹亚；场景关键孵化地；面向全年龄段；被当地噪音法规关闭' },
-  { id:'v_union',      label:'Union Theatre',        type:'Venue', chapter:2,  detail:'圣佩德罗；D. Boon 租下运营；演出刻意安排得早，让工人能准时回家' },
-  { id:'v_cbgb',       label:'CBGB',                 type:'Venue', chapter:7,  detail:'纽约；朋克场景圣地（1973–2006）' },
-  { id:'v_steamplant', label:'Georgetown Steamplant', type:'Venue', chapter:9, detail:'西雅图；Big Black 最后一场演出地点；直接影响 Sub Pop 后来的方向' },
-  { id:'v_maxwells',   label:"Maxwell's",            type:'Venue', chapter:10, detail:'霍博肯/新泽西；Dinosaur Jr 演出地；Ira Kaplan 曾在此任音响师' },
-  { id:'v_folkcity',   label:'Folk City',            type:'Venue', chapter:10, detail:'纽约；Sonic Youth 第二次看 Dinosaur Jr；Mascis 把 Moore 震到墙上' },
-  { id:'v_obanions',   label:"O'Banion's",           type:'Venue', chapter:9,  detail:'芝加哥；Minor Threat 芝加哥演出地；Durango 在此为其做音响' },
-
-  // ── 共同出现 / 事件 ──
-  { id:'e001', label:'Tropicana 1984.9',  type:'Event', chapter:13, detail:'Beat Happening 为 Black Flag 暖场；Rollins 起哄 Johnson，Johnson 以"你妈妈没教过你礼貌吗"化解' },
-  { id:'e002', label:'Folk City 1986',    type:'Event', chapter:10, detail:'Sonic Youth 第二次看 Dinosaur Jr；Mascis 第一首歌就把 Moore 震到墙上' },
-  { id:'e003', label:'1986 巡演末场',     type:'Event', chapter:10, detail:'巡演最后一场，Ranaldo 上台与 Dinosaur Jr 合唱 Neil Young 的 Cortez the Killer' },
-  { id:'e004', label:'跨州巡演 1981',     type:'Event', chapter:4,  detail:'Minor Threat 与 Youth Brigade 共同参与 1981 年夏的跨州巡演' },
-  { id:'e005', label:'Steamplant 1987',   type:'Event', chapter:9,  detail:'Big Black 最后一场演出；Mark Arm 在台下第一排；直接影响 Sub Pop 音乐方向' },
-  { id:'e006', label:'CBGB ~1984',        type:'Event', chapter:6,  detail:'Replacements 面对一屋子唱片公司高管搞砸演出；Westerberg："我们能拿到唱片合同了吗"' },
-  { id:'e007', label:'斯波坎演出',        type:'Event', chapter:11, detail:'Picciotto 请全场举手、邀观众上台；乐队下到台下围着暴力舞者演奏' },
-  { id:'e008', label:'Burma 告别 1983',   type:'Event', chapter:3,  detail:'Mission of Burma 在波士顿 Bradford Hotel 的正式告别演出' },
-  { id:'e009', label:'IPU 大会 1991',     type:'Event', chapter:13, detail:'International Pop Underground Convention（西雅图 Fantagraphics 仓库）；150 人，无舞台' },
-  { id:'e010', label:'Lorton 监狱演出',   type:'Event', chapter:11, detail:'Fugazi 在弗吉尼亚州 Lorton 惩教所演出' }];
+// ── 数据：由《Our Band Could Be Your Life》关系收集表自动生成 ──
+const nodes = [{"id": "L001","label": "SST Records","type": "Label","chapter": null,"detail": "创始人：Greg Ginn；旗下：Black Flag,Minutemen,fIREHOSE,Hüsker Dü,Sonic Youth；建立了地下发行的基础范本"},{"id": "L002","label": "Dischord Records","type": "Label","chapter": null,"detail": "创始人：Ian MacKaye, Jeff Nelson；旗下：Minor Threat,Fugazi,Teen Idles,Rites of Spring,Embrace"},{"id": "L003","label": "Ace of Hearts Records","type": "Label","chapter": null,"detail": "旗下：Mission of Burma"},{"id": "L004","label": "Touch & Go Records","type": "Label","chapter": null,"detail": "创始人：Tesco Vee, Corey Rusk；旗下：Butthole Surfers,Big Black,The Necros"},{"id": "L005","label": "K Records","type": "Label","chapter": null,"detail": "创始人：Calvin Johnson；旗下：Beat Happening；座右铭\"International Pop Underground\""},{"id": "L006","label": "Sub Pop Records","type": "Label","chapter": null,"detail": "创始人：Bruce Pavitt, Jonathan Poneman；旗下：Mudhoney,Green River,TAD；座右铭\"World Domination\""},{"id": "L007","label": "Twin/Tone Records","type": "Label","chapter": null,"detail": "创始人：Paul Stark, Peter Jesperson；旗下：The Replacements"},{"id": "L008","label": "Homestead Records","type": "Label","chapter": null,"detail": "创始人：Gerard Cosloy；旗下：Dinosaur Jr,Sonic Youth（早期）；Cosloy离开后逐渐消失"},{"id": "L009","label": "Reprise/Warner","type": "Label","chapter": null,"detail": "旗下：Hüsker Dü"},{"id": "L010","label": "Geffen/DGC","type": "Label","chapter": null,"detail": "旗下：Sonic Youth"},{"id": "L011","label": "New Alliance Records","type": "Label","chapter": null,"detail": "创始人：Mike Watt, D. Boon；旗下：The Minutemen"},{"id": "L012","label": "Alternative Tentacles","type": "Label","chapter": null,"detail": "创始人：Jello Biafra"},{"id": "B001","label": "Black Flag","type": "Band","chapter": 1,"detail": "开创独立乐队全国巡演模式；建立SST发行体系的先驱｜朋克/硬核 / 重金属"},{"id": "B002","label": "The Minutemen","type": "Band","chapter": 2,"detail": "jam econo哲学；D. Boon 1985年去世后解散｜后朋克 / 放克/爵士"},{"id": "B003","label": "The Reactionaries","type": "Band","chapter": 2,"detail": "Minutemen前身；存续约七个月｜朋克"},{"id": "B004","label": "fIREHOSE","type": "Band","chapter": 2,"detail": "Minutemen解散后由Watt & Hurley组建｜另类摇滚 / 后朋克"},{"id": "B005","label": "Mission of Burma","type": "Band","chapter": 3,"detail": "比基础设施早了十年的\"超前\"乐队；耳鸣导致解散｜后朋克 / 实验摇滚"},{"id": "B006","label": "Minor Threat","type": "Band","chapter": 4,"detail": "straight edge 发源地；两年二十五首歌｜硬核朋克 / straight edge"},{"id": "B007","label": "Fugazi","type": "Band","chapter": 11,"detail": "五美元票价；拒绝一切商业妥协；近两百万张唱片｜后朋克 / 数学摇滚"},{"id": "B008","label": "Teen Idles","type": "Band","chapter": 4,"detail": "Minor Threat前身；发明手背画X的straight edge视觉符号｜硬核朋克"},{"id": "B009","label": "S.O.A.","type": "Band","chapter": 4,"detail": "Henry Garfield（后改名 Rollins）主唱；D.C.早期硬核｜硬核朋克"},{"id": "B010","label": "Hüsker Dü","type": "Band","chapter": 5,"detail": "首支签约主流的核心独立乐队；Mould vs Hart内部张力｜另类摇滚 / 朋克"},{"id": "B011","label": "The Replacements","type": "Band","chapter": 6,"detail": "自毁美学；Bob Stinson 1995年去世｜另类摇滚 / 朋克摇滚"},{"id": "B012","label": "Sonic Youth","type": "Band","chapter": 7,"detail": "indie原型乐队；把Nirvana引荐给Geffen｜噪音摇滚 / 实验摇滚"},{"id": "B013","label": "Butthole Surfers","type": "Band","chapter": 8,"detail": "边界测试者；DIY可承载任何内容的证明｜实验摇滚 / 迷幻"},{"id": "B014","label": "Big Black","type": "Band","chapter": 9,"detail": "1987年全盛期主动解散；工业摇滚蓝图｜工业摇滚 / 噪音摇滚"},{"id": "B015","label": "Dinosaur Jr","type": "Band","chapter": 10,"detail": "音量即意义；Mascis用沉默压垮Barlow｜另类摇滚 / 噪音流行"},{"id": "B016","label": "Mogo","type": "Band","chapter": 10,"detail": "Dinosaur Jr前身；首演后数日即解散｜硬核朋克"},{"id": "B017","label": "Beat Happening","type": "Band","chapter": 13,"detail": "\"不会演奏\"作为邀请；twee-pop/riot grrrl的精神起点｜独立流行 / 朋克"},{"id": "B018","label": "Mudhoney","type": "Band","chapter": 12,"detail": "\"Touch Me Im Sick\"定义西雅图之声；Sub Pop的注脚｜垃圾摇滚 / 车库摇滚"},{"id": "B019","label": "Green River","type": "Band","chapter": 12,"detail": "Mudhoney与Pearl Jam的共同前身｜垃圾摇滚 / 重金属"},{"id": "B020","label": "Bad Brains","type": "Band","chapter": 4,"detail": "MacKaye的精神偶像；H.R.劝说MacKaye重组Minor Threat｜硬核朋克 / 雷鬼"},{"id": "B021","label": "Youth Brigade","type": "Band","chapter": 4,"detail": "Nathan Strejcek组建；与Minor Threat同行1981年跨州巡演｜硬核朋克"},{"id": "B022","label": "Government Issue","type": "Band","chapter": 4,"detail": "Brian Baker于Minor Threat第一次解散期间加入｜硬核朋克"},{"id": "B023","label": "Rites of Spring","type": "Band","chapter": 11,"detail": "Fugazi前身之一；D.C. emo早期代表｜情感硬核"},{"id": "B024","label": "Embrace","type": "Band","chapter": 11,"detail": "Minor Threat解散后MacKaye的过渡乐队｜后硬核"},{"id": "B025","label": "TAD","type": "Band","chapter": 12,"detail": "Sub Pop早期核心乐队；Pepsi商标诉讼拖累Sub Pop｜垃圾摇滚 / 重金属"},{"id": "B026","label": "The Necros","type": "Band","chapter": 3,"detail": "Corey Rusk为贝斯手；与Touch & Go深度关联｜硬核朋克"},{"id": "B027","label": "Deep Wound","type": "Band","chapter": 10,"detail": "Mascis与Barlow早期乐队｜硬核朋克"},{"id": "B028","label": "The Coachmen","type": "Band","chapter": 7,"detail": "Thurston Moore纽约早期乐队｜后朋克"},{"id": "B029","label": "R.E.M.","type": "Band","chapter": 2,"detail": "Minutemen巡演搭档（1985年）；Watt口中的\"学院摇滚\"传承者；巡演团队对Minutemen态度恶劣但乐队本人友好｜另类摇滚 / 学院摇滚"},{"id": "B030","label": "Public Image Ltd","type": "Band","chapter": null,"detail": "John Lydon 创立；书中贯穿四章的反面偶像；对 Minutemen/Burma/Minor Threat/Green River 均有轻蔑行为｜后朋克 / 实验摇滚"},{"id": "B031","label": "Nirvana","type": "Band","chapter": 0,"detail": "引言的触发点；《Nevermind》1991年登顶；由 Sonic Youth 引荐给 Geffen/DGC；Dan Peters 曾短暂担任鼓手｜垃圾摇滚 / 另类摇滚"},{"id": "B032","label": "Soundgarden","type": "Band","chapter": 12,"detail": "Sub Pop 第一批核心乐队；Poneman 因 Soundgarden 而结识 Pavitt；后签约 A&M｜垃圾摇滚 / 重金属"},{"id": "B033","label": "Pearl Jam","type": "Band","chapter": 12,"detail": "Ament & Gossard 在 Green River→Mother Love Bone 之后组建；Green River 解散的直接后续｜垃圾摇滚 / 另类摇滚"},{"id": "B034","label": "Mother Love Bone","type": "Band","chapter": 12,"detail": "Green River 解散后 Ament/Gossard 组建；主唱 Andrew Wood 1990年去世后解散；Pearl Jam 的直接前身｜垃圾摇滚 / 重金属"},{"id": "B035","label": "Meat Puppets","type": "Band","chapter": null,"detail": "SST 旗下重要乐队；D. Boon 晚期深受其影响；Curt Kirkwood 与 Albini 有趣互动｜另类摇滚 / 迷幻朋克"},{"id": "B036","label": "Dead Kennedys","type": "Band","chapter": null,"detail": "Jello Biafra 创立；Black Flag 早期盟友；邀请 Hüsker Dü 在 Mabuhay Gardens 开场｜硬核朋克 / 朋克"},{"id": "B037","label": "Television","type": "Band","chapter": 2,"detail": "启发 Boon/Watt 的先驱乐队；Minutemen 与 R.E.M. 最后合奏其歌曲\"See No Evil\"｜后朋克 / 艺术摇滚"},{"id": "B038","label": "D.O.A.","type": "Band","chapter": null,"detail": "Black Flag 早期巡演盟友；帮助 Hüsker Dü 打入西北太平洋地区｜硬核朋克"},{"id": "P001","label": "Greg Ginn","type": "Person","chapter": 1,"detail": "Black Flag（吉他）"},{"id": "P002","label": "Chuck Dukowski","type": "Person","chapter": 1,"detail": "Black Flag（贝斯）"},{"id": "P003","label": "Henry Rollins","type": "Person","chapter": 1,"detail": "Black Flag（主唱）；S.O.A.（主唱）"},{"id": "P004","label": "Raymond Pettibon","type": "Person","chapter": 1,"detail": "Black Flag（视觉艺术）"},{"id": "P005","label": "Mike Watt","type": "Person","chapter": 2,"detail": "The Minutemen（贝斯/主唱）；fIREHOSE（贝斯）"},{"id": "P006","label": "D. Boon","type": "Person","chapter": 2,"detail": "The Minutemen（吉他/主唱）"},{"id": "P007","label": "George Hurley","type": "Person","chapter": 2,"detail": "The Minutemen（鼓手）；fIREHOSE（鼓手）"},{"id": "P008","label": "Ed Crawford","type": "Person","chapter": 2,"detail": "fIREHOSE（吉他）"},{"id": "P009","label": "Ian MacKaye","type": "Person","chapter": 4,"detail": "Minor Threat（主唱）；Teen Idles（贝斯）；Fugazi（吉他/主唱）；Embrace（主唱/吉他）"},{"id": "P010","label": "Jeff Nelson","type": "Person","chapter": 4,"detail": "Minor Threat（鼓手）；Teen Idles（鼓手）"},{"id": "P011","label": "Lyle Preslar","type": "Person","chapter": 4,"detail": "Minor Threat（吉他）"},{"id": "P012","label": "Brian Baker","type": "Person","chapter": 4,"detail": "Minor Threat（贝斯）"},{"id": "P013","label": "Nathan Strejcek","type": "Person","chapter": 4,"detail": "Teen Idles（主唱）"},{"id": "P014","label": "Guy Picciotto","type": "Person","chapter": 11,"detail": "Fugazi（主唱→吉他/主唱）；Rites of Spring（主唱）"},{"id": "P015","label": "Joe Lally","type": "Person","chapter": 11,"detail": "Fugazi（贝斯）"},{"id": "P016","label": "Brendan Canty","type": "Person","chapter": 11,"detail": "Fugazi（鼓手）；Rites of Spring（鼓手）"},{"id": "P017","label": "Bob Mould","type": "Person","chapter": 5,"detail": "Hüsker Dü（吉他/主唱）"},{"id": "P018","label": "Grant Hart","type": "Person","chapter": 5,"detail": "Hüsker Dü（鼓手/主唱）"},{"id": "P019","label": "Greg Norton","type": "Person","chapter": 5,"detail": "Hüsker Dü（贝斯）"},{"id": "P020","label": "Paul Westerberg","type": "Person","chapter": 6,"detail": "The Replacements（主唱/吉他/词曲）"},{"id": "P021","label": "Bob Stinson","type": "Person","chapter": 6,"detail": "The Replacements（吉他）"},{"id": "P022","label": "Tommy Stinson","type": "Person","chapter": 6,"detail": "The Replacements（贝斯）"},{"id": "P023","label": "Chris Mars","type": "Person","chapter": 6,"detail": "The Replacements（鼓手）"},{"id": "P024","label": "Thurston Moore","type": "Person","chapter": 7,"detail": "Sonic Youth（吉他/主唱）"},{"id": "P025","label": "Kim Gordon","type": "Person","chapter": 7,"detail": "Sonic Youth（贝斯/主唱）"},{"id": "P026","label": "Lee Ranaldo","type": "Person","chapter": 7,"detail": "Sonic Youth（吉他）"},{"id": "P027","label": "Steve Shelley","type": "Person","chapter": 7,"detail": "Sonic Youth（鼓手）"},{"id": "P028","label": "Gibby Haynes","type": "Person","chapter": 8,"detail": "Butthole Surfers（主唱）"},{"id": "P029","label": "Paul Leary","type": "Person","chapter": 8,"detail": "Butthole Surfers（吉他）"},{"id": "P030","label": "King Coffey","type": "Person","chapter": 8,"detail": "Butthole Surfers（鼓手）"},{"id": "P031","label": "Steve Albini","type": "Person","chapter": 9,"detail": "Big Black（吉他/主唱）"},{"id": "P032","label": "Santiago Durango","type": "Person","chapter": 9,"detail": "Big Black（吉他）"},{"id": "P033","label": "Dave Riley","type": "Person","chapter": 9,"detail": "Big Black（贝斯）"},{"id": "P034","label": "J Mascis","type": "Person","chapter": 10,"detail": "Dinosaur Jr（吉他/主唱）；Mogo（鼓手）"},{"id": "P035","label": "Lou Barlow","type": "Person","chapter": 10,"detail": "Dinosaur Jr（贝斯）；Mogo（成员）"},{"id": "P036","label": "Murph","type": "Person","chapter": 10,"detail": "Dinosaur Jr（鼓手）"},{"id": "P037","label": "Calvin Johnson","type": "Person","chapter": 13,"detail": "Beat Happening（主唱/吉他）"},{"id": "P038","label": "Heather Lewis","type": "Person","chapter": 13,"detail": "Beat Happening（主唱/鼓手）"},{"id": "P039","label": "Bret Lunsford","type": "Person","chapter": 13,"detail": "Beat Happening（吉他）"},{"id": "P040","label": "Mark Arm","type": "Person","chapter": 12,"detail": "Mudhoney（吉他/主唱）"},{"id": "P041","label": "Steve Turner","type": "Person","chapter": 12,"detail": "Mudhoney（吉他）"},{"id": "P042","label": "Matt Lukin","type": "Person","chapter": 12,"detail": "Mudhoney（贝斯）"},{"id": "P043","label": "Dan Peters","type": "Person","chapter": 12,"detail": "Mudhoney（鼓手）"},{"id": "P047","label": "Martin Tamburovich","type": "Person","chapter": 2,"detail": "The Reactionaries（主唱）"},{"id": "P048","label": "Jeff Ament","type": "Person","chapter": 12,"detail": "Green River（贝斯）"},{"id": "P049","label": "Stone Gossard","type": "Person","chapter": 12,"detail": "Green River（吉他）"},{"id": "P050","label": "Nakajima","type": "Person","chapter": 10,"detail": "Mogo（主唱）"},{"id": "PF01","label": "Tesco Vee","type": "Person","chapter": null,"detail": "Touch & Go Records 创始人"},{"id": "PF02","label": "Corey Rusk","type": "Person","chapter": null,"detail": "Touch & Go Records 创始人"},{"id": "PF03","label": "Bruce Pavitt","type": "Person","chapter": null,"detail": "Sub Pop Records 创始人"},{"id": "PF04","label": "Jonathan Poneman","type": "Person","chapter": null,"detail": "Sub Pop Records 创始人"},{"id": "PF05","label": "Paul Stark","type": "Person","chapter": null,"detail": "Twin/Tone Records 创始人"},{"id": "PF06","label": "Peter Jesperson","type": "Person","chapter": null,"detail": "Twin/Tone Records 创始人"},{"id": "PF07","label": "Gerard Cosloy","type": "Person","chapter": null,"detail": "Homestead Records 创始人"},{"id": "PF08","label": "Jello Biafra","type": "Person","chapter": null,"detail": "Alternative Tentacles 创始人"},{"id": "positive_force","label": "Positive Force DC","type": "Project","chapter": 11,"detail": "朋克背景政治行动组织；组织 Fugazi 本地演出，收益捐给本地社区组织"},{"id": "V001","label": "9:30 Club","type": "Venue","chapter": null,"detail": "D.C.硬核场景核心演出场地；曾执行全年龄段政策，影响整个D.C.场景人员构成"},{"id": "V002","label": "Wilson Center","type": "Venue","chapter": null,"detail": "D.C.早期演出空间，面向全年龄段开放"},{"id": "V003","label": "Tropicana","type": "Venue","chapter": null,"detail": "奥林匹亚场景关键孵化地；面向全年龄段；被当地噪音法规关闭"},{"id": "V004","label": "Union Theatre","type": "Venue","chapter": null,"detail": "D. Boon租下并运营；演出时间刻意安排得早让工人能准时回家"},{"id": "V005","label": "CBGB","type": "Venue","chapter": null,"detail": "350｜纽约朋克场景圣地；Replacements在此面对一屋子唱片公司高管搞砸演出"},{"id": "V006","label": "Georgetown Steamplant","type": "Venue","chapter": null,"detail": "Big Black最后一场演出地点；直接影响Sub Pop后来的音乐方向"},{"id": "V007","label": "Maxwell's","type": "Venue","chapter": null,"detail": "Ira Kaplan（Yo La Tengo）曾在此任音响师；Dinosaur Jr演出地"},{"id": "V008","label": "Folk City","type": "Venue","chapter": null,"detail": "Sonic Youth第二次看Dinosaur Jr演出地；Mascis把Moore震到墙上"},{"id": "V009","label": "O'Banion's","type": "Venue","chapter": null,"detail": "Minor Threat芝加哥演出地；Santiago Durango在此为其做音响"},{"id": "V010","label": "Inner Ear Studios","type": "Venue","chapter": null,"detail": "Don Zientara 自宅改建录音室；D.C. 硬核场景核心录音据点；Teen Idles/Minor Threat/Fugazi 均在此录音；混音板在门廊，乐队在地下室演奏"},{"id": "V011","label": "Dischord House","type": "Venue","chapter": null,"detail": "MacKaye 与其他成员合租；Dischord Records 运营中心；地下室为排练空间；各地巡演乐队的重要中途站"},{"id": "V012","label": "Bradford Hotel（大宴会厅）","type": "Venue","chapter": null,"detail": "Mission of Burma 告别演出地（1983年3月）；Azerrad 称其为\"Burma 的 Woodstock\"；末场为前往斯塔顿岛参加 PiL 暖场演出"},{"id": "V013","label": "Mabuhay Gardens","type": "Venue","chapter": null,"detail": "Hüsker Dü 早期重要演出地；Teen Idles 在此被画手背 X 而发明 straight edge 视觉符号；Dead Kennedys 主场"},{"id": "V014","label": "Paramount Theatre","type": "Venue","chapter": null,"detail": "Green River 为 PiL 暖场地点；Arm 台上宣告\"等着看什么叫彻底卖身\"；乐队赛后砸 PiL 后台被逐出"},{"id": "V015","label": "Radio Tokyo","type": "Venue","chapter": null,"detail": "Minutemen 常用低价录音室；3-Way Tie (for Last) 在此录制（$25/小时，16轨）"},{"id": "V016","label": "Fallout Records","type": "Venue","chapter": null,"detail": "Bruce Pavitt 工作的唱片店；Sonic Youth 首次来西雅图时在此做店内演出，由此与 Pavitt 建立连接"},{"id": "P044","label": "Glenn Branca","type": "Person","chapter": null,"detail": "Branca称其\"比任何人都更理解我的音乐感觉\""},{"id": "P045","label": "Jello Biafra","type": "Person","chapter": null,"detail": "Biafra把Butthole Surfers demo传给Rusk"},{"id": "P046","label": "Corey Rusk","type": "Person","chapter": null,"detail": "Biafra把Butthole Surfers demo传给Rusk"},{"id": "E001","label": "1984年9月 · Tropicana","type": "Event","chapter": null,"detail": "Beat Happening为Black Flag暖场；Rollins起哄Johnson；Johnson用\"你妈妈没教过你礼貌吗\"化解"},{"id": "E002","label": "1986 · Folk City","type": "Event","chapter": null,"detail": "Sonic Youth第二次看Dinosaur Jr演出；Mascis第一首歌把Moore震到墙上"},{"id": "E003","label": "1986年巡演末场","type": "Event","chapter": null,"detail": "最后一场Ranaldo上台与Dinosaur Jr合唱Neil Young的Cortez the Killer"},{"id": "E004","label": "1981年夏 · 跨州巡演","type": "Event","chapter": null,"detail": "Minor Threat与Youth Brigade共同参与跨州巡演"},{"id": "E005","label": "1987 · Georgetown Steamplant","type": "Event","chapter": null,"detail": "Big Black最后一场演出；Mark Arm在台下第一排；直接影响Sub Pop音乐方向"},{"id": "E006","label": "1984前后 · CBGB","type": "Event","chapter": null,"detail": "Replacements面对一屋子唱片公司高管演奏一场乱糟糟的翻唱秀；Westerberg说\"我们能拿到唱片合同了吗\""},{"id": "E007","label": "斯波坎某场演出","type": "Event","chapter": null,"detail": "Picciotto请全场举手；邀请其他观众上台；乐队下到台下围着暴力舞者演奏"},{"id": "E008","label": "1983年末 · Bradford Hotel","type": "Event","chapter": null,"detail": "Mission of Burma正式告别演出"},{"id": "E009","label": "1991年8月 · Fantagraphics仓库","type": "Event","chapter": null,"detail": "International Pop Underground Convention；150人，无舞台，旁边是漫画书箱子"},{"id": "E010","label": "1980s末 · Lorton惩教所","type": "Event","chapter": null,"detail": "Fugazi在弗吉尼亚州Lorton惩教所演出"},{"id": "city_la","label": "洛杉矶","type": "City","chapter": null,"detail": "SST Records，Reprise/Warner，Geffen/DGC，Black Flag"},{"id": "city_dc","label": "华盛顿特区","type": "City","chapter": null,"detail": "Dischord Records，Minor Threat，Fugazi，Teen Idles，S.O.A.，Bad Brains 等"},{"id": "city_boston","label": "波士顿","type": "City","chapter": null,"detail": "Ace of Hearts Records，Mission of Burma"},{"id": "city_chicago","label": "芝加哥","type": "City","chapter": null,"detail": "Touch & Go Records，Big Black"},{"id": "city_olympia","label": "奥林匹亚","type": "City","chapter": null,"detail": "K Records，Beat Happening"},{"id": "city_seattle","label": "西雅图","type": "City","chapter": null,"detail": "Sub Pop Records，Mudhoney，Green River，TAD，Nirvana，Soundgarden 等"},{"id": "city_minneapolis","label": "明尼阿波利斯/圣保罗","type": "City","chapter": null,"detail": "Twin/Tone Records，Hüsker Dü，The Replacements"},{"id": "city_ny","label": "纽约","type": "City","chapter": null,"detail": "Homestead Records，Sonic Youth，The Coachmen，Television"},{"id": "city_sp","label": "圣佩德罗","type": "City","chapter": null,"detail": "New Alliance Records，The Minutemen，The Reactionaries，fIREHOSE"},{"id": "city_sf","label": "旧金山","type": "City","chapter": null,"detail": "Alternative Tentacles，Dead Kennedys"},{"id": "city_austin","label": "奥斯汀","type": "City","chapter": null,"detail": "Butthole Surfers"},{"id": "city_amherst","label": "阿默斯特","type": "City","chapter": null,"detail": "Dinosaur Jr，Mogo，Deep Wound"},{"id": "city_toledo","label": "托莱多","type": "City","chapter": null,"detail": "The Necros"},{"id": "city_athens","label": "雅典(佐治亚)","type": "City","chapter": null,"detail": "R.E.M."},{"id": "city_london","label": "伦敦","type": "City","chapter": null,"detail": "Public Image Ltd"},{"id": "city_phoenix","label": "凤凰城","type": "City","chapter": null,"detail": "Meat Puppets"},{"id": "city_vancouver","label": "温哥华","type": "City","chapter": null,"detail": "D.O.A."},{"id": "city_hoboken","label": "霍博肯","type": "City","chapter": null,"detail": ""},{"id": "city_arlington","label": "阿灵顿","type": "City","chapter": null,"detail": ""}];
 
 // 清洗节点：去掉数组空洞、占位用的 pettibon_link，并按 id 去重（保留首次出现）
 // 数据按章节分块录入，存在重复定义（如 dinosaur_jr、albini 等），不去重会渲染出重叠的幽灵节点
@@ -566,354 +383,10 @@ const filteredNodes = nodes.filter(n => {
   return true;
 });
 
-const links = [
-  // 厂牌归属
-  { source:'black_flag',    target:'sst',          type:'affiliation',   label:'旗下' },
-  { source:'minutemen',     target:'sst',          type:'affiliation',   label:'旗下' },
-  { source:'firehose',      target:'sst',          type:'affiliation',   label:'旗下' },
-  { source:'firehose',      target:'columbia',     type:'affiliation',   label:'后期签约' },
-  { source:'sonic_youth',   target:'sst',          type:'affiliation',   label:'旗下' },
-  { source:'husker_du',     target:'sst',          type:'affiliation',   label:'旗下' },
-  { source:'mudhoney',      target:'sub_pop',      type:'affiliation',   label:'旗下' },
-  { source:'minor_threat',  target:'dischord',     type:'affiliation',   label:'旗下' },
-  { source:'fugazi',        target:'dischord',     type:'affiliation',   label:'旗下' },
-  { source:'teen_idles',    target:'dischord',     type:'affiliation',   label:'旗下' },
-  { source:'minutemen',     target:'new_alliance', type:'affiliation',   label:'联合创立' },
-  { source:'necros',        target:'touch_go',     type:'affiliation',   label:'旗下' },
-  { source:'mission_burma', target:'ace_of_hearts',type:'affiliation',   label:'旗下' },
-
-  // 成员关系
-  { source:'greg_ginn',     target:'black_flag',   type:'membership',    label:'吉他手' },
-  { source:'dukowski',      target:'black_flag',   type:'membership',    label:'贝斯手' },
-  { source:'rollins',       target:'black_flag',   type:'membership',    label:'主唱 1981+' },
-  { source:'watt',          target:'minutemen',    type:'membership',    label:'贝斯手' },
-  { source:'boon',          target:'minutemen',    type:'membership',    label:'吉他/主唱' },
-  { source:'hurley',        target:'minutemen',    type:'membership',    label:'鼓手' },
-  { source:'watt',          target:'reactionaries',type:'membership',    label:'成员' },
-  { source:'boon',          target:'reactionaries',type:'membership',    label:'成员' },
-  { source:'watt',          target:'firehose',     type:'membership',    label:'贝斯手' },
-  { source:'hurley',        target:'firehose',     type:'membership',    label:'鼓手' },
-  { source:'crawford',      target:'firehose',     type:'membership',    label:'吉他手' },
-  { source:'mackaye',       target:'minor_threat', type:'membership',    label:'主唱' },
-  { source:'nelson',        target:'minor_threat', type:'membership',    label:'鼓手' },
-  { source:'preslar',       target:'minor_threat', type:'membership',    label:'吉他手' },
-  { source:'baker',         target:'minor_threat', type:'membership',    label:'贝斯手' },
-  { source:'mackaye',       target:'teen_idles',   type:'membership',    label:'贝斯手' },
-  { source:'nelson',        target:'teen_idles',   type:'membership',    label:'成员' },
-  { source:'strejcek',      target:'teen_idles',   type:'membership',    label:'主唱' },
-  { source:'rollins',       target:'soa',          type:'membership',    label:'主唱' },
-  { source:'strejcek',      target:'youth_brigade',type:'membership',    label:'组建' },
-  { source:'baker',         target:'govt_issue',   type:'membership',    label:'临时成员' },
-  { source:'corey_rusk',    target:'necros',       type:'membership',    label:'贝斯手' },
-  { source:'mackaye',       target:'fugazi',       type:'membership',    label:'成员' },
-
-  // 厂牌创立
-  { source:'greg_ginn',     target:'sst',          type:'affiliation',   label:'创始人' },
-  { source:'mackaye',       target:'dischord',     type:'affiliation',   label:'联合创始人' },
-  { source:'nelson',        target:'dischord',     type:'affiliation',   label:'联合创始人' },
-  { source:'strejcek',      target:'dischord',     type:'affiliation',   label:'早期运营' },
-  { source:'watt',          target:'new_alliance', type:'affiliation',   label:'联合创始人' },
-  { source:'boon',          target:'new_alliance', type:'affiliation',   label:'联合创始人' },
-  { source:'corey_rusk',    target:'touch_go',     type:'affiliation',   label:'接手运营' },
-  { source:'joe_carducci',  target:'sst',          type:'affiliation',   label:'销售/推广 1981–86' },
-  { source:'dukowski',      target:'sst',          type:'affiliation',   label:'Global Booking' },
-
-  // 前身/继承
-  { source:'reactionaries', target:'minutemen',    type:'succession',    label:'前身' },
-  { source:'teen_idles',    target:'minor_threat', type:'succession',    label:'前身' },
-  { source:'minutemen',     target:'firehose',     type:'succession',    label:'解散后延续' },
-  { source:'soa',           target:'black_flag',   type:'succession',    label:'Rollins 加入' },
-
-  // 人物关系
-  { source:'greg_ginn',     target:'pettibon',     type:'family',        label:'兄弟' },
-  { source:'mackaye',       target:'rollins',      type:'collaboration', label:'早期邻居/后共处场景' },
-  { source:'watt',          target:'boon',         type:'collaboration', label:'终生挚友与搭档' },
-  { source:'dukowski',      target:'black_flag',   type:'membership',    label:'贝斯' },
-  { source:'preslar',       target:'albini',       type:'collaboration', label:'西北大学结识' },
-  { source:'corey_rusk',    target:'mackaye',      type:'collaboration', label:'磁带网络/笔友' },
-  { source:'durango',       target:'albini',       type:'collaboration', label:'后同在 Big Black' },
-
-  // 合作与影响
-  { source:'black_flag',    target:'minutemen',    type:'collaboration', label:'面包车借用/排练空间/SST 引荐' },
-  { source:'minor_threat',  target:'youth_brigade',type:'collaboration', label:'1981年跨州巡演同行' },
-  { source:'bad_brains',    target:'mackaye',      type:'collaboration', label:'H.R. 劝说重组 Minor Threat' },
-  { source:'husker_du',     target:'minor_threat', type:'collaboration', label:'同台演出/互相挑衅' },
-
-  // 地理
-  { source:'black_flag',    target:'city_la',      type:'location_of',   label:'大本营' },
-  { source:'sst',           target:'city_la',      type:'location_of',   label:'总部' },
-  { source:'minutemen',     target:'city_sp',      type:'location_of',   label:'大本营' },
-  { source:'reactionaries', target:'city_sp',      type:'location_of',   label:'大本营' },
-  { source:'minor_threat',  target:'city_dc',      type:'location_of',   label:'大本营' },
-  { source:'fugazi',        target:'city_dc',      type:'location_of',   label:'大本营' },
-  { source:'teen_idles',    target:'city_dc',      type:'location_of',   label:'大本营' },
-  { source:'bad_brains',    target:'city_dc',      type:'location_of',   label:'大本营' },
-  { source:'dischord',      target:'city_dc',      type:'location_of',   label:'总部' },
-  { source:'mission_burma', target:'city_boston',  type:'location_of',   label:'大本营' },
-  { source:'ace_of_hearts', target:'city_boston',  type:'location_of',   label:'总部' },
-  { source:'touch_go',      target:'city_chicago', type:'location_of',   label:'总部' },
-  { source:'sonic_youth',   target:'city_ny',      type:'location_of',   label:'大本营' },
-  { source:'mudhoney',      target:'city_seattle', type:'location_of',   label:'大本营' },
-  { source:'sub_pop',       target:'city_seattle', type:'location_of',   label:'总部' },
-
-  // Hüsker Dü 第五章
-  { source:'husker_du',     target:'reprise',       type:'affiliation',   label:'1986年签约' },
-  { source:'bob_mould',     target:'husker_du',     type:'membership',    label:'吉他/主唱' },
-  { source:'grant_hart',    target:'husker_du',     type:'membership',    label:'鼓/主唱' },
-  { source:'greg_norton',   target:'husker_du',     type:'membership',    label:'贝斯手' },
-  { source:'david_savoy',   target:'husker_du',     type:'affiliation',   label:'经理' },
-  { source:'bob_mould',     target:'david_savoy',   type:'collaboration', label:'密友' },
-  { source:'husker_du',     target:'city_minneapolis', type:'location_of', label:'大本营' },
-  { source:'reprise',       target:'city_la',       type:'location_of',   label:'总部' },
-  { source:'bob_mould',     target:'grant_hart',    type:'collaboration', label:'创作竞争/张力' },
-
-  // 第六章关系
-  { source:'replacements',  target:'twin_tone',      type:'affiliation',   label:'旗下（无合同）' },
-  { source:'replacements',  target:'reprise',         type:'affiliation',   label:'1986年签约' },
-  { source:'westerberg',    target:'replacements',   type:'membership',    label:'主唱/词曲' },
-  { source:'bob_stinson',   target:'replacements',   type:'membership',    label:'吉他手（至1986年）' },
-  { source:'tommy_stinson', target:'replacements',   type:'membership',    label:'贝斯手' },
-  { source:'chris_mars',    target:'replacements',   type:'membership',    label:'鼓手' },
-  { source:'jesperson',     target:'twin_tone',      type:'affiliation',   label:'联合创始人' },
-  { source:'paul_stark',    target:'twin_tone',      type:'affiliation',   label:'联合创始人' },
-  { source:'jesperson',     target:'replacements',   type:'affiliation',   label:'经理（至1986年）' },
-  { source:'bob_stinson',   target:'tommy_stinson',  type:'family',        label:'兄弟' },
-  { source:'replacements',  target:'city_minneapolis', type:'location_of', label:'大本营' },
-  { source:'twin_tone',     target:'city_minneapolis', type:'location_of', label:'总部' },
-  { source:'husker_du',     target:'replacements',   type:'collaboration', label:'同城竞争/相互定义' },
-
-  // 第七章关系
-  { source:'sonic_youth',   target:'geffen',          type:'affiliation',   label:'签约（主流）' },
-  { source:'thurston_moore', target:'sonic_youth',    type:'membership',    label:'吉他/主唱' },
-  { source:'kim_gordon',    target:'sonic_youth',     type:'membership',    label:'贝斯/主唱' },
-  { source:'lee_ranaldo',   target:'sonic_youth',     type:'membership',    label:'吉他' },
-  { source:'steve_shelley', target:'sonic_youth',     type:'membership',    label:'鼓手' },
-  { source:'thurston_moore','target':'kim_gordon',    type:'collaboration', label:'夫妻/共同创始人' },
-  { source:'lee_ranaldo',   target:'glenn_branca',    type:'membership',    label:'六重奏核心成员' },
-  { source:'thurston_moore','target':'glenn_branca',  type:'collaboration', label:'曾参与六重奏' },
-  { source:'kim_gordon',    target:'glenn_branca',    type:'collaboration', label:'通过其圈子接触音乐' },
-  { source:'stanton_miranda','target':'kim_gordon',   type:'collaboration', label:'CKM 乐队' },
-  { source:'stanton_miranda','target':'thurston_moore',type:'collaboration',label:'介绍 Moore 与 Gordon' },
-  { source:'sonic_youth',   target:'city_ny',         type:'location_of',   label:'大本营' },
-  { source:'geffen',        target:'city_la',         type:'location_of',   label:'总部' },
-  { source:'thurston_moore','target':'minutemen',      type:'collaboration', label:'主动建立连接/网络节点' },
-  { source:'sonic_youth',   target:'husker_du',       type:'collaboration', label:'SST 同期旗下乐队' },
-
-  // 第八章关系
-  { source:'butthole_surfers', target:'touch_go',     type:'affiliation',   label:'旗下（早期）' },
-  { source:'gibby_haynes',  target:'butthole_surfers', type:'membership',   label:'主唱' },
-  { source:'paul_leary',    target:'butthole_surfers', type:'membership',   label:'吉他手' },
-  { source:'king_coffey',   target:'butthole_surfers', type:'membership',   label:'鼓手' },
-  { source:'butthole_surfers', target:'city_austin',  type:'location_of',   label:'定居（1986年）' },
-  { source:'jello_biafra',  target:'corey_rusk',      type:'collaboration', label:'传递 demo 磁带' },
-  { source:'corey_rusk',    target:'mackaye',         type:'collaboration', label:'转递磁带给 MacKaye' },
-  { source:'jello_biafra',  target:'butthole_surfers', type:'collaboration',label:'demo 传播起点' },
-  { source:'mark_kramer',   target:'butthole_surfers', type:'collaboration',label:'纽约场景中间人' },
-  { source:'lee_ranaldo',   target:'butthole_surfers', type:'collaboration',label:'"台上台下无分界线"——对比评语' },
-
-  // 第九章关系
-  { source:'big_black',     target:'touch_go',        type:'affiliation',   label:'旗下' },
-  { source:'big_black',     target:'ruthless',         type:'affiliation',   label:'早期自创厂牌' },
-  { source:'albini',        target:'big_black',        type:'membership',    label:'吉他/主唱/核心' },
-  { source:'durango',       target:'big_black',        type:'membership',    label:'吉他手' },
-  { source:'dave_riley',    target:'big_black',        type:'membership',    label:'贝斯手' },
-  { source:'big_black',     target:'city_chicago',     type:'location_of',   label:'大本营' },
-  { source:'touch_go',      target:'city_chicago',     type:'location_of',   label:'总部' },
-  { source:'durango',       target:'minor_threat',     type:'collaboration', label:'音响（芝加哥）' },
-  { source:'mark_arm',      target:'big_black',        type:'collaboration', label:'最后一场演出台下观众；影响 Sub Pop 方向' },
-  { source:'mark_arm',      target:'mudhoney',         type:'membership',    label:'主唱' },
-  { source:'mudhoney',      target:'sub_pop',          type:'affiliation',   label:'旗下' },
-  { source:'albini',        target:'preslar',          type:'collaboration', label:'西北大学同期（通过 Nate Kato）' },
-
-  // 第十章关系
-  { source:'dinosaur_jr',   target:'homestead',        type:'affiliation',   label:'早期旗下' },
-  { source:'dinosaur_jr',   target:'sst',              type:'affiliation',   label:'旗下（You Are Living All Over Me 起）' },
-  { source:'mascis',        target:'dinosaur_jr',      type:'membership',    label:'吉他/主唱/核心' },
-  { source:'barlow',        target:'dinosaur_jr',      type:'membership',    label:'贝斯（至被开除）' },
-  { source:'murph',         target:'dinosaur_jr',      type:'membership',    label:'鼓手' },
-  { source:'mascis',        target:'barlow',           type:'collaboration', label:'创作张力；沉默权力结构' },
-  { source:'dinosaur_jr',   target:'city_amherst',     type:'location_of',   label:'大本营' },
-  { source:'sonic_youth',   target:'dinosaur_jr',      type:'collaboration', label:'带其参加首次真正巡演（1986）；精神盟友' },
-  { source:'thurston_moore', target:'mascis',           type:'collaboration', label:'Moore 被 Dinosaur Jr 现场震到墙上' },
-  { source:'lee_ranaldo',   target:'dinosaur_jr',      type:'collaboration', label:'与 Dinosaur Jr 合唱 Cortez the Killer' },
-
-  // 第十二章关系
-  { source:'mudhoney',      target:'sub_pop',          type:'affiliation',   label:'旗下（早期）' },
-  { source:'mark_arm',      target:'mudhoney',         type:'membership',    label:'吉他/主唱' },
-  { source:'steve_turner',  target:'mudhoney',         type:'membership',    label:'吉他手' },
-  { source:'mark_arm',      target:'green_river',      type:'membership',    label:'成员' },
-  { source:'steve_turner',  target:'green_river',      type:'membership',    label:'成员' },
-  { source:'tad',           target:'sub_pop',          type:'affiliation',   label:'旗下' },
-  { source:'pavitt',        target:'sub_pop',          type:'affiliation',   label:'联合创始人' },
-  { source:'poneman',       target:'sub_pop',          type:'affiliation',   label:'联合创始人' },
-  { source:'charles_peterson','target':'sub_pop',       type:'collaboration', label:'御用摄影师' },
-  { source:'jack_endino',   target:'mudhoney',         type:'collaboration', label:'早期录音师' },
-  { source:'sub_pop',       target:'city_seattle',     type:'location_of',   label:'总部' },
-  { source:'green_river',   target:'city_seattle',     type:'location_of',   label:'大本营' },
-  { source:'sonic_youth',   target:'mudhoney',         type:'collaboration', label:'主动提出分割单曲；向全国推介 Mudhoney' },
-  { source:'thurston_moore','target':'pavitt',          type:'collaboration', label:'持续信息流通；在 Sub Pop 公告板留便条推荐 Hole' },
-  { source:'mark_arm',      target:'big_black',        type:'collaboration', label:'Big Black 最后演出台下第一排；影响 Sub Pop 方向' },
-
-  // 第十一章关系
-  { source:'picciotto',     target:'fugazi',           type:'membership',    label:'主唱/吉他手' },
-  { source:'joe_lally',     target:'fugazi',           type:'membership',    label:'贝斯手' },
-  { source:'brendan_canty', target:'fugazi',           type:'membership',    label:'鼓手' },
-  { source:'picciotto',     target:'rites_of_spring',  type:'membership',    label:'主唱' },
-  { source:'brendan_canty', target:'rites_of_spring',  type:'membership',    label:'鼓手' },
-  { source:'mackaye',       target:'embrace',          type:'membership',    label:'Minor Threat 后过渡乐队' },
-  { source:'positive_force','target':'fugazi',          type:'collaboration', label:'组织所有本地演出' },
-  { source:'mark_andersen', target:'positive_force',   type:'affiliation',   label:'主要组织者' },
-  { source:'rites_of_spring','target':'city_dc',        type:'location_of',   label:'大本营' },
-  { source:'fugazi',        target:'dischord',         type:'affiliation',   label:'旗下（拒绝主流；拒绝 Touch & Go）' },
-  { source:'mackaye',       target:'picciotto',        type:'collaboration', label:'共同创始人；从个人主导到集体创作的转变' },
-  { source:'corey_rusk',    target:'mackaye',          type:'collaboration', label:'MacKaye 曾提议去 Touch & Go 发行以避利益冲突' },
-,
-
-  // 第十章
-  { source:'mascis',        target:'dinosaur_jr',      type:'membership',    label:'吉他/主唱/核心' },
-  { source:'barlow',        target:'dinosaur_jr',      type:'membership',    label:'贝斯（至被开除）' },
-  { source:'murph',         target:'dinosaur_jr',      type:'membership',    label:'鼓手' },
-  { source:'dinosaur_jr',   target:'homestead',        type:'affiliation',   label:'早期旗下' },
-  { source:'dinosaur_jr',   target:'sst',              type:'affiliation',   label:'旗下（You Are Living All Over Me 起）' },
-  { source:'dinosaur_jr',   target:'city_amherst',     type:'location_of',   label:'大本营' },
-  { source:'mascis',        target:'barlow',           type:'collaboration', label:'沉默权力结构；Dont 事件' },
-  { source:'sonic_youth',   target:'dinosaur_jr',      type:'collaboration', label:'带其参加首次真正巡演（1986）；精神盟友' },
-  { source:'thurston_moore', target:'mascis',          type:'collaboration', label:'Moore 被 Dinosaur Jr 现场震到墙上' },
-  { source:'lee_ranaldo',   target:'dinosaur_jr',      type:'collaboration', label:'与 Dinosaur Jr 合唱 Cortez the Killer' },
-
-  // 第十一章
-  { source:'picciotto',     target:'fugazi',           type:'membership',    label:'主唱/吉他手' },
-  { source:'joe_lally',     target:'fugazi',           type:'membership',    label:'贝斯手' },
-  { source:'brendan_canty', target:'fugazi',           type:'membership',    label:'鼓手' },
-  { source:'picciotto',     target:'rites_of_spring',  type:'membership',    label:'主唱' },
-  { source:'brendan_canty', target:'rites_of_spring',  type:'membership',    label:'鼓手' },
-  { source:'mackaye',       target:'embrace',          type:'membership',    label:'Minor Threat 后过渡乐队' },
-  { source:'positive_force',target:'fugazi',           type:'collaboration', label:'组织所有本地演出' },
-  { source:'mark_andersen', target:'positive_force',   type:'affiliation',   label:'主要组织者' },
-  { source:'rites_of_spring',target:'city_dc',        type:'location_of',   label:'大本营' },
-  { source:'embrace',       target:'dischord',         type:'affiliation',   label:'旗下' },
-  { source:'rites_of_spring',target:'dischord',       type:'affiliation',   label:'旗下' },
-  { source:'rites_of_spring',target:'fugazi',         type:'succession',    label:'前身之一' },
-  { source:'embrace',       target:'fugazi',          type:'succession',    label:'前身之一' },
-  { source:'fugazi',        target:'city_dc',         type:'location_of',   label:'大本营' },
-  { source:'mackaye',       target:'picciotto',        type:'collaboration', label:'共同创始人；从个人主导到集体创作的转变' },
-
-  // 第十二章
-  { source:'steve_turner',  target:'mudhoney',         type:'membership',    label:'吉他手' },
-  { source:'steve_turner',  target:'green_river',      type:'membership',    label:'成员' },
-  { source:'mark_arm',      target:'green_river',      type:'membership',    label:'成员' },
-  { source:'green_river',   target:'city_seattle',     type:'location_of',   label:'大本营' },
-  { source:'mudhoney',      target:'green_river',      type:'succession',    label:'Arm/Turner 离队后组建' },
-  { source:'pavitt',        target:'sub_pop',          type:'affiliation',   label:'联合创始人' },
-  { source:'poneman',       target:'sub_pop',          type:'affiliation',   label:'联合创始人' },
-  { source:'jack_endino',   target:'mudhoney',         type:'collaboration', label:'早期录音师' },
-  { source:'jack_endino',   target:'sub_pop',          type:'affiliation',   label:'核心录音师' },
-  { source:'sonic_youth',   target:'mudhoney',         type:'collaboration', label:'主动提出分割单曲；向全国推介 Mudhoney' },
-  { source:'thurston_moore','target':'pavitt',         type:'collaboration', label:'持续信息流通；在 Sub Pop 公告板留便条推荐乐队' },
-
-  // 第六章（Replacements）
-  { source:'replacements',  target:'twin_tone',        type:'affiliation',   label:'旗下（无合同）' },
-  { source:'replacements',  target:'city_minneapolis', type:'location_of',   label:'大本营' },
-  { source:'westerberg',    target:'replacements',     type:'membership',    label:'主唱/词曲' },
-  { source:'bob_stinson',   target:'replacements',     type:'membership',    label:'吉他（至1986年）' },
-  { source:'jesperson',     target:'twin_tone',        type:'affiliation',   label:'联合创始人' },
-  { source:'jesperson',     target:'replacements',     type:'affiliation',   label:'经理（至1986年）' },
-  { source:'twin_tone',     target:'city_minneapolis', type:'location_of',   label:'总部' },
-  { source:'husker_du',     target:'replacements',     type:'collaboration', label:'同城竞争/相互定义' },
-
-  // 第十三章
-  { source:'beat_happening',target:'k_records',        type:'affiliation',   label:'旗下/核心乐队' },
-  { source:'calvin_johnson',target:'beat_happening',   type:'membership',    label:'主唱/吉他' },
-  { source:'heather_lewis', target:'beat_happening',   type:'membership',    label:'主唱/鼓手' },
-  { source:'bret_lunsford', target:'beat_happening',   type:'membership',    label:'吉他手' },
-  { source:'calvin_johnson',target:'k_records',        type:'affiliation',   label:'创始人' },
-  { source:'beat_happening',target:'city_olympia',     type:'location_of',   label:'大本营' },
-  { source:'k_records',     target:'city_olympia',     type:'location_of',   label:'总部' },
-  { source:'calvin_johnson',target:'thurston_moore',   type:'collaboration', label:'Moore 曾在 K Records 公告板订购唱片' },
-  { source:'beat_happening',target:'black_flag',       type:'collaboration', label:'Black Flag 暖场；Rollins vs Johnson 现场对峙' },
-  { source:'k_records',     target:'sub_pop',          type:'collaboration', label:'K 曾为 Sub Pop 做发行；国际流行地下 vs 世界统治' },
-
-  // ── 补充实体的关系（来自收集表数据源）──
-  // 遗漏乐队 / 人物 / 厂牌
-  { source:'mogo',          target:'dinosaur_jr',   type:'succession',  label:'前身' },
-  { source:'mogo',          target:'city_amherst',  type:'location_of', label:'大本营' },
-  { source:'mascis',        target:'deep_wound',    type:'membership',  label:'成员' },
-  { source:'barlow',        target:'deep_wound',    type:'membership',  label:'成员' },
-  { source:'deep_wound',    target:'city_amherst',  type:'location_of', label:'大本营' },
-  { source:'thurston_moore',target:'the_coachmen',  type:'membership',  label:'成员' },
-  { source:'the_coachmen',  target:'city_ny',       type:'location_of', label:'大本营' },
-  { source:'matt_lukin',    target:'mudhoney',      type:'membership',  label:'贝斯手' },
-  { source:'dan_peters',    target:'mudhoney',      type:'membership',  label:'鼓手' },
-  { source:'jello_biafra',  target:'alt_tentacles', type:'affiliation', label:'创始人' },
-  { source:'alt_tentacles', target:'city_sf',       type:'location_of', label:'总部' },
-  // 源数据中已有、原图遗漏的厂牌关系
-  { source:'sonic_youth',   target:'homestead',     type:'affiliation', label:'早期发行' },
-  { source:'husker_du',     target:'new_alliance',  type:'affiliation', label:'早期发行（Land Speed Record）' },
-
-  // 场地 → 城市
-  { source:'v_930',        target:'city_dc',      type:'location_of', label:'位于' },
-  { source:'v_wilson',     target:'city_dc',      type:'location_of', label:'位于' },
-  { source:'v_tropicana',  target:'city_olympia', type:'location_of', label:'位于' },
-  { source:'v_union',      target:'city_sp',      type:'location_of', label:'位于' },
-  { source:'v_cbgb',       target:'city_ny',      type:'location_of', label:'位于' },
-  { source:'v_steamplant', target:'city_seattle', type:'location_of', label:'位于' },
-  { source:'v_folkcity',   target:'city_ny',      type:'location_of', label:'位于' },
-  { source:'v_obanions',   target:'city_chicago', type:'location_of', label:'位于' },
-  // 场地 ↔ 关键演出（无独立事件记录的）
-  { source:'minutemen',    target:'v_union',      type:'appearance',  label:'D. Boon 运营/演出' },
-  { source:'minor_threat', target:'v_obanions',   type:'appearance',  label:'演出（Durango 做音响）' },
-  { source:'dinosaur_jr',  target:'v_maxwells',   type:'appearance',  label:'演出地' },
-
-  // 事件 → 参与实体 / 场地
-  { source:'e001', target:'black_flag',    type:'appearance', label:'演出' },
-  { source:'e001', target:'beat_happening',type:'appearance', label:'暖场' },
-  { source:'e001', target:'v_tropicana',   type:'appearance', label:'地点' },
-  { source:'e002', target:'sonic_youth',   type:'appearance', label:'观看' },
-  { source:'e002', target:'dinosaur_jr',   type:'appearance', label:'演出' },
-  { source:'e002', target:'v_folkcity',    type:'appearance', label:'地点' },
-  { source:'e003', target:'sonic_youth',   type:'appearance', label:'同台' },
-  { source:'e003', target:'dinosaur_jr',   type:'appearance', label:'同台' },
-  { source:'e003', target:'lee_ranaldo',   type:'appearance', label:'上台合唱' },
-  { source:'e004', target:'minor_threat',  type:'appearance', label:'同行' },
-  { source:'e004', target:'youth_brigade', type:'appearance', label:'同行' },
-  { source:'e005', target:'big_black',     type:'appearance', label:'最后演出' },
-  { source:'e005', target:'mark_arm',      type:'appearance', label:'台下第一排' },
-  { source:'e005', target:'v_steamplant',  type:'appearance', label:'地点' },
-  { source:'e006', target:'replacements',  type:'appearance', label:'演出' },
-  { source:'e006', target:'v_cbgb',        type:'appearance', label:'地点' },
-  { source:'e007', target:'fugazi',        type:'appearance', label:'演出' },
-  { source:'e008', target:'mission_burma', type:'appearance', label:'告别演出' },
-  { source:'e009', target:'beat_happening',type:'appearance', label:'演出' },
-  { source:'e009', target:'sonic_youth',   type:'appearance', label:'演出' },
-  { source:'e010', target:'fugazi',        type:'appearance', label:'演出' }];
-
-
+const links = [{"source": "L001","target": "city_la","type": "location_of","label": "总部"},{"source": "L002","target": "city_dc","type": "location_of","label": "总部"},{"source": "L003","target": "city_boston","type": "location_of","label": "总部"},{"source": "L004","target": "city_chicago","type": "location_of","label": "总部"},{"source": "L005","target": "city_olympia","type": "location_of","label": "总部"},{"source": "L006","target": "city_seattle","type": "location_of","label": "总部"},{"source": "L007","target": "city_minneapolis","type": "location_of","label": "总部"},{"source": "L008","target": "city_ny","type": "location_of","label": "总部"},{"source": "L009","target": "city_la","type": "location_of","label": "总部"},{"source": "L010","target": "city_la","type": "location_of","label": "总部"},{"source": "L011","target": "city_sp","type": "location_of","label": "总部"},{"source": "L012","target": "city_sf","type": "location_of","label": "总部"},{"source": "B001","target": "city_la","type": "location_of","label": "大本营"},{"source": "B001","target": "L001","type": "affiliation","label": "旗下"},{"source": "B002","target": "city_sp","type": "location_of","label": "大本营"},{"source": "B002","target": "L001","type": "affiliation","label": "旗下"},{"source": "B003","target": "B002","type": "succession","label": "前身"},{"source": "B003","target": "city_sp","type": "location_of","label": "大本营"},{"source": "B004","target": "city_sp","type": "location_of","label": "大本营"},{"source": "B004","target": "L001","type": "affiliation","label": "旗下"},{"source": "B002","target": "B004","type": "succession","label": "前身"},{"source": "B005","target": "city_boston","type": "location_of","label": "大本营"},{"source": "B005","target": "L003","type": "affiliation","label": "旗下"},{"source": "B006","target": "city_dc","type": "location_of","label": "大本营"},{"source": "B006","target": "L002","type": "affiliation","label": "旗下"},{"source": "B008","target": "B006","type": "succession","label": "前身"},{"source": "B007","target": "city_dc","type": "location_of","label": "大本营"},{"source": "B007","target": "L002","type": "affiliation","label": "旗下"},{"source": "B008","target": "city_dc","type": "location_of","label": "大本营"},{"source": "B008","target": "L002","type": "affiliation","label": "旗下"},{"source": "B009","target": "city_dc","type": "location_of","label": "大本营"},{"source": "B010","target": "city_minneapolis","type": "location_of","label": "大本营"},{"source": "B010","target": "L001","type": "affiliation","label": "旗下"},{"source": "B011","target": "city_minneapolis","type": "location_of","label": "大本营"},{"source": "B011","target": "L007","type": "affiliation","label": "旗下"},{"source": "B012","target": "city_ny","type": "location_of","label": "大本营"},{"source": "B012","target": "L001","type": "affiliation","label": "旗下"},{"source": "B013","target": "city_austin","type": "location_of","label": "大本营"},{"source": "B013","target": "L004","type": "affiliation","label": "旗下"},{"source": "B014","target": "city_chicago","type": "location_of","label": "大本营"},{"source": "B014","target": "L004","type": "affiliation","label": "旗下"},{"source": "B015","target": "city_amherst","type": "location_of","label": "大本营"},{"source": "B015","target": "L008","type": "affiliation","label": "旗下"},{"source": "B016","target": "B015","type": "succession","label": "前身"},{"source": "B016","target": "city_amherst","type": "location_of","label": "大本营"},{"source": "B017","target": "city_olympia","type": "location_of","label": "大本营"},{"source": "B017","target": "L005","type": "affiliation","label": "旗下"},{"source": "B018","target": "city_seattle","type": "location_of","label": "大本营"},{"source": "B018","target": "L006","type": "affiliation","label": "旗下"},{"source": "B019","target": "B018","type": "succession","label": "前身"},{"source": "B019","target": "city_seattle","type": "location_of","label": "大本营"},{"source": "B019","target": "L006","type": "affiliation","label": "旗下"},{"source": "B020","target": "city_dc","type": "location_of","label": "大本营"},{"source": "B021","target": "city_dc","type": "location_of","label": "大本营"},{"source": "B022","target": "city_dc","type": "location_of","label": "大本营"},{"source": "B023","target": "city_dc","type": "location_of","label": "大本营"},{"source": "B023","target": "L002","type": "affiliation","label": "旗下"},{"source": "B024","target": "city_dc","type": "location_of","label": "大本营"},{"source": "B024","target": "L002","type": "affiliation","label": "旗下"},{"source": "B025","target": "city_seattle","type": "location_of","label": "大本营"},{"source": "B025","target": "L006","type": "affiliation","label": "旗下"},{"source": "B026","target": "city_toledo","type": "location_of","label": "大本营"},{"source": "B026","target": "L004","type": "affiliation","label": "旗下"},{"source": "B027","target": "city_amherst","type": "location_of","label": "大本营"},{"source": "B028","target": "city_ny","type": "location_of","label": "大本营"},{"source": "B029","target": "city_athens","type": "location_of","label": "大本营"},{"source": "B030","target": "city_london","type": "location_of","label": "大本营"},{"source": "B031","target": "city_seattle","type": "location_of","label": "大本营"},{"source": "B031","target": "L006","type": "affiliation","label": "旗下"},{"source": "B032","target": "city_seattle","type": "location_of","label": "大本营"},{"source": "B032","target": "L006","type": "affiliation","label": "旗下"},{"source": "B033","target": "city_seattle","type": "location_of","label": "大本营"},{"source": "B019","target": "B033","type": "succession","label": "前身"},{"source": "B034","target": "city_seattle","type": "location_of","label": "大本营"},{"source": "B019","target": "B034","type": "succession","label": "前身"},{"source": "B035","target": "city_phoenix","type": "location_of","label": "大本营"},{"source": "B035","target": "L001","type": "affiliation","label": "旗下"},{"source": "B036","target": "city_sf","type": "location_of","label": "大本营"},{"source": "B036","target": "L012","type": "affiliation","label": "旗下"},{"source": "B037","target": "city_ny","type": "location_of","label": "大本营"},{"source": "B038","target": "city_vancouver","type": "location_of","label": "大本营"},{"source": "P001","target": "B001","type": "membership","label": "吉他"},{"source": "P002","target": "B001","type": "membership","label": "贝斯"},{"source": "P003","target": "B001","type": "membership","label": "主唱"},{"source": "P004","target": "B001","type": "membership","label": "视觉艺术"},{"source": "P005","target": "B002","type": "membership","label": "贝斯/主唱"},{"source": "P006","target": "B002","type": "membership","label": "吉他/主唱"},{"source": "P007","target": "B002","type": "membership","label": "鼓手"},{"source": "P005","target": "B004","type": "membership","label": "贝斯"},{"source": "P007","target": "B004","type": "membership","label": "鼓手"},{"source": "P008","target": "B004","type": "membership","label": "吉他"},{"source": "P009","target": "B006","type": "membership","label": "主唱"},{"source": "P010","target": "B006","type": "membership","label": "鼓手"},{"source": "P011","target": "B006","type": "membership","label": "吉他"},{"source": "P012","target": "B006","type": "membership","label": "贝斯"},{"source": "P009","target": "B008","type": "membership","label": "贝斯"},{"source": "P010","target": "B008","type": "membership","label": "鼓手"},{"source": "P013","target": "B008","type": "membership","label": "主唱"},{"source": "P009","target": "B007","type": "membership","label": "吉他/主唱"},{"source": "P014","target": "B007","type": "membership","label": "主唱→吉他/主唱"},{"source": "P015","target": "B007","type": "membership","label": "贝斯"},{"source": "P016","target": "B007","type": "membership","label": "鼓手"},{"source": "P017","target": "B010","type": "membership","label": "吉他/主唱"},{"source": "P018","target": "B010","type": "membership","label": "鼓手/主唱"},{"source": "P019","target": "B010","type": "membership","label": "贝斯"},{"source": "P020","target": "B011","type": "membership","label": "主唱/吉他/词曲"},{"source": "P021","target": "B011","type": "membership","label": "吉他"},{"source": "P022","target": "B011","type": "membership","label": "贝斯"},{"source": "P023","target": "B011","type": "membership","label": "鼓手"},{"source": "P024","target": "B012","type": "membership","label": "吉他/主唱"},{"source": "P025","target": "B012","type": "membership","label": "贝斯/主唱"},{"source": "P026","target": "B012","type": "membership","label": "吉他"},{"source": "P027","target": "B012","type": "membership","label": "鼓手"},{"source": "P028","target": "B013","type": "membership","label": "主唱"},{"source": "P029","target": "B013","type": "membership","label": "吉他"},{"source": "P030","target": "B013","type": "membership","label": "鼓手"},{"source": "P031","target": "B014","type": "membership","label": "吉他/主唱"},{"source": "P032","target": "B014","type": "membership","label": "吉他"},{"source": "P033","target": "B014","type": "membership","label": "贝斯"},{"source": "P034","target": "B015","type": "membership","label": "吉他/主唱"},{"source": "P035","target": "B015","type": "membership","label": "贝斯"},{"source": "P036","target": "B015","type": "membership","label": "鼓手"},{"source": "P037","target": "B017","type": "membership","label": "主唱/吉他"},{"source": "P038","target": "B017","type": "membership","label": "主唱/鼓手"},{"source": "P039","target": "B017","type": "membership","label": "吉他"},{"source": "P040","target": "B018","type": "membership","label": "吉他/主唱"},{"source": "P041","target": "B018","type": "membership","label": "吉他"},{"source": "P042","target": "B018","type": "membership","label": "贝斯"},{"source": "P043","target": "B018","type": "membership","label": "鼓手"},{"source": "P003","target": "B009","type": "membership","label": "主唱"},{"source": "P014","target": "B023","type": "membership","label": "主唱"},{"source": "P016","target": "B023","type": "membership","label": "鼓手"},{"source": "P009","target": "B024","type": "membership","label": "主唱/吉他"},{"source": "P047","target": "B003","type": "membership","label": "主唱"},{"source": "P048","target": "B019","type": "membership","label": "贝斯"},{"source": "P049","target": "B019","type": "membership","label": "吉他"},{"source": "P034","target": "B016","type": "membership","label": "鼓手"},{"source": "P035","target": "B016","type": "membership","label": "成员"},{"source": "P050","target": "B016","type": "membership","label": "主唱"},{"source": "P001","target": "L001","type": "affiliation","label": "创始人"},{"source": "P009","target": "L002","type": "affiliation","label": "联合创始人"},{"source": "P010","target": "L002","type": "affiliation","label": "联合创始人"},{"source": "PF01","target": "L004","type": "affiliation","label": "联合创始人"},{"source": "PF02","target": "L004","type": "affiliation","label": "联合创始人"},{"source": "P037","target": "L005","type": "affiliation","label": "创始人"},{"source": "PF03","target": "L006","type": "affiliation","label": "联合创始人"},{"source": "PF04","target": "L006","type": "affiliation","label": "联合创始人"},{"source": "PF05","target": "L007","type": "affiliation","label": "联合创始人"},{"source": "PF06","target": "L007","type": "affiliation","label": "联合创始人"},{"source": "PF07","target": "L008","type": "affiliation","label": "创始人"},{"source": "P005","target": "L011","type": "affiliation","label": "联合创始人"},{"source": "P006","target": "L011","type": "affiliation","label": "联合创始人"},{"source": "PF08","target": "L012","type": "affiliation","label": "创始人"},{"source": "V001","target": "city_dc","type": "location_of","label": "位于"},{"source": "V002","target": "city_dc","type": "location_of","label": "位于"},{"source": "V003","target": "city_olympia","type": "location_of","label": "位于"},{"source": "V004","target": "city_sp","type": "location_of","label": "位于"},{"source": "V005","target": "city_ny","type": "location_of","label": "位于"},{"source": "V006","target": "city_seattle","type": "location_of","label": "位于"},{"source": "V007","target": "city_hoboken","type": "location_of","label": "位于"},{"source": "V008","target": "city_ny","type": "location_of","label": "位于"},{"source": "V009","target": "city_chicago","type": "location_of","label": "位于"},{"source": "V010","target": "city_arlington","type": "location_of","label": "位于"},{"source": "V011","target": "city_dc","type": "location_of","label": "位于"},{"source": "V012","target": "city_boston","type": "location_of","label": "位于"},{"source": "V013","target": "city_sf","type": "location_of","label": "位于"},{"source": "V014","target": "city_seattle","type": "location_of","label": "位于"},{"source": "V015","target": "city_la","type": "location_of","label": "位于"},{"source": "V016","target": "city_seattle","type": "location_of","label": "位于"},{"source": "B001","target": "B002","type": "collaboration","label": "面包车借用/排练空间共用/SST引荐"},{"source": "B002","target": "L011","type": "affiliation","label": "联合创立厂牌"},{"source": "B010","target": "L011","type": "affiliation","label": "发行专辑"},{"source": "P001","target": "P004","type": "family","label": "兄弟/视觉合作"},{"source": "P009","target": "P003","type": "collaboration","label": "场景同伴/早期宿敌后和解"},{"source": "P005","target": "P006","type": "collaboration","label": "终生挚友/音乐搭档"},{"source": "B012","target": "B015","type": "collaboration","label": "带其参加首次真正巡演/精神盟友"},{"source": "B012","target": "B018","type": "collaboration","label": "分割单曲/互相推介"},{"source": "P024","target": "L006","type": "collaboration","label": "信息流通/互相推介"},{"source": "B013","target": "L004","type": "affiliation","label": "签约发行"},{"source": "P031","target": "B001","type": "collaboration","label": "西北大学同期/通过Nate Kato结识"},{"source": "P032","target": "B006","type": "collaboration","label": "演出音响支持"},{"source": "B007","target": "positive_force","type": "collaboration","label": "组织本地演出/慈善合作"},{"source": "P009","target": "P010","type": "collaboration","label": "联合创立Dischord Records"},{"source": "B012","target": "L010","type": "affiliation","label": "签约（磁铁乐队策略）"},{"source": "P028","target": "P029","type": "collaboration","label": "联合出版地下杂志/联合组建乐队"},{"source": "P037","target": "L005","type": "affiliation","label": "创立厂牌/核心运营"},{"source": "P037","target": "P024","type": "collaboration","label": "音乐网络联系/互相支持"},{"source": "B006","target": "B021","type": "collaboration","label": "跨州巡演同行"},{"source": "P021","target": "P022","type": "family","label": "兄弟"},{"source": "P009","target": "B020","type": "collaboration","label": "精神影响/H.R.劝说重组Minor Threat"},{"source": "P040","target": "B014","type": "collaboration","label": "Big Black最后演出台下第一排观众"},{"source": "P026","target": "P044","type": "collaboration","label": "六重奏核心成员/音乐副手"},{"source": "P024","target": "P044","type": "collaboration","label": "参与六重奏"},{"source": "P025","target": "P044","type": "collaboration","label": "通过Branca圈子接触音乐"},{"source": "P028","target": "P030","type": "collaboration","label": "共同创立Butthole Surfers/长期合作"},{"source": "B010","target": "L009","type": "affiliation","label": "签约主流（首支）"},{"source": "P030","target": "L004","type": "collaboration","label": "中间人/信息传递"},{"source": "P045","target": "P046","type": "collaboration","label": "磁带传递（Butthole Surfers demo）"},{"source": "P046","target": "P009","type": "collaboration","label": "磁带传递/笔友"},{"source": "B002","target": "B029","type": "collaboration","label": "巡演开场（Minutemen为R.E.M.暖场）"},{"source": "B030","target": "B002","type": "collaboration","label": "暖场（Minutemen为PiL开场）"},{"source": "B030","target": "B005","type": "collaboration","label": "暖场（Burma为PiL开场）——Burma最后一批演出"},{"source": "B030","target": "B006","type": "collaboration","label": "暖场（Minor Threat为PiL开场）"},{"source": "B030","target": "B019","type": "collaboration","label": "暖场（Green River为PiL开场）"},{"source": "B035","target": "L001","type": "affiliation","label": "旗下乐队"},{"source": "B036","target": "B001","type": "collaboration","label": "早期巡演盟友/互相支持"},{"source": "B036","target": "B010","type": "collaboration","label": "Biafra邀请Hüsker Dü在Mabuhay Gardens开场"},{"source": "B031","target": "B012","type": "collaboration","label": "Sonic Youth引荐给Geffen/DGC"},{"source": "B032","target": "L006","type": "affiliation","label": "旗下（早期）"},{"source": "B001","target": "B038","type": "collaboration","label": "早期巡演盟友"},{"source": "E001","target": "B001","type": "appearance","label": "参与"},{"source": "E001","target": "B017","type": "appearance","label": "参与"},{"source": "E001","target": "V003","type": "appearance","label": "地点"},{"source": "E002","target": "B012","type": "appearance","label": "参与"},{"source": "E002","target": "B015","type": "appearance","label": "参与"},{"source": "E002","target": "V008","type": "appearance","label": "地点"},{"source": "E003","target": "B012","type": "appearance","label": "参与"},{"source": "E003","target": "B015","type": "appearance","label": "参与"},{"source": "E003","target": "P026","type": "appearance","label": "参与"},{"source": "E004","target": "B006","type": "appearance","label": "参与"},{"source": "E004","target": "B021","type": "appearance","label": "参与"},{"source": "E005","target": "B014","type": "appearance","label": "参与"},{"source": "E005","target": "P040","type": "appearance","label": "参与"},{"source": "E005","target": "V006","type": "appearance","label": "地点"},{"source": "E006","target": "B011","type": "appearance","label": "参与"},{"source": "E006","target": "V005","type": "appearance","label": "地点"},{"source": "E007","target": "B007","type": "appearance","label": "参与"},{"source": "E008","target": "B005","type": "appearance","label": "参与"},{"source": "E009","target": "B017","type": "appearance","label": "参与"},{"source": "E009","target": "B012","type": "appearance","label": "参与"},{"source": "E010","target": "B007","type": "appearance","label": "参与"}];
 
 // ── Scene 数据 ──
-const scenes = [
-  { id:'sc001', label:'D.C. 硬核场景 1979–83',      type:'本地',
-    nodes:['minor_threat','teen_idles','soa','bad_brains','youth_brigade','govt_issue','dischord','mackaye','nelson','preslar','baker','strejcek','rollins','city_dc','v_930','v_wilson','e004'] },
-  { id:'sc002', label:'D.C. 后硬核场景 1984–',       type:'本地',
-    nodes:['fugazi','rites_of_spring','embrace','dischord','mackaye','picciotto','joe_lally','brendan_canty','positive_force','mark_andersen','city_dc','e007','e010'] },
-  { id:'sc003', label:'SST 生态圈 1978–89',          type:'跨地域',
-    nodes:['sst','black_flag','minutemen','firehose','husker_du','sonic_youth','greg_ginn','dukowski','rollins','watt','boon','hurley','bob_mould','grant_hart','city_la','city_sp','city_minneapolis','city_ny','v_union'] },
-  { id:'sc004', label:'奥林匹亚 K 场景 1982–',       type:'本地+跨地域',
-    nodes:['beat_happening','k_records','calvin_johnson','heather_lewis','bret_lunsford','city_olympia','v_tropicana','e001'] },
-  { id:'sc005', label:'西雅图格朗基场景 1986–92',    type:'本地',
-    nodes:['mudhoney','green_river','tad','sub_pop','pavitt','poneman','jack_endino','mark_arm','steve_turner','matt_lukin','dan_peters','city_seattle','v_steamplant','e005','e009'] },
-  { id:'sc006', label:'明尼阿波利斯另类摇滚',        type:'本地',
-    nodes:['husker_du','replacements','twin_tone','bob_mould','grant_hart','greg_norton','westerberg','bob_stinson','jesperson','city_minneapolis'] },
-  { id:'sc007', label:'芝加哥工业/噪音场景 1981–87', type:'本地',
-    nodes:['big_black','necros','touch_go','albini','durango','dave_riley','corey_rusk','city_chicago','v_obanions'] },
-  { id:'sc008', label:'纽约艺术/噪音场景 1981–90',   type:'本地',
-    nodes:['sonic_youth','city_ny','thurston_moore','kim_gordon','lee_ranaldo','steve_shelley','glenn_branca','the_coachmen','v_cbgb','v_folkcity','e002'] },
-  { id:'sc009', label:'波士顿后朋克场景 1979–83',    type:'本地',
-    nodes:['mission_burma','ace_of_hearts','city_boston','e008'] },
-  { id:'sc010', label:'K 国际流行地下网络 1982–',    type:'跨地域',
-    nodes:['k_records','beat_happening','calvin_johnson','sub_pop','thurston_moore','city_olympia','e009'] },
-  { id:'sc011', label:'阿默斯特/Dinosaur Jr 谱系',   type:'本地',
-    nodes:['dinosaur_jr','mogo','deep_wound','mascis','barlow','murph','homestead','city_amherst','v_maxwells'] },
-];
+const scenes = [{"id": "SC001","label": "D.C. 硬核场景 1979–1983","type": "本地","nodes": ["B006","B008","B009","B020","B021","B022","E004","L002","P003","P009","P010","P011","P012","P013","city_dc"]},{"id": "SC002","label": "D.C. 后硬核场景 1984–2003","type": "本地","nodes": ["B007","B023","B024","E007","E010","L002","P009","P014","P015","P016","city_dc"]},{"id": "SC003","label": "SST 生态圈 1978–1989","type": "跨地域","nodes": ["B001","B002","B004","B010","B012","L001","P001","P002","P003","P004","P005","P006","P007","P008","P017","P018","P019","P024","P025","P026","P027","city_la","city_minneapolis","city_ny","city_sp"]},{"id": "SC004","label": "奥林匹亚 K 场景 1982–1992","type": "本地/跨地域","nodes": ["B017","L005","P037","P038","P039","city_olympia"]},{"id": "SC005","label": "西雅图格朗基场景 1986–1992","type": "本地","nodes": ["B018","B019","B025","L006","P040","P041","P042","P043","P048","P049","city_seattle"]},{"id": "SC006","label": "波士顿后朋克场景 1979–1983","type": "本地","nodes": ["B005","E008","city_boston"]},{"id": "SC007","label": "芝加哥工业/噪音场景 1981–1987","type": "本地","nodes": ["B014","B026","L004","P031","P032","P033","city_chicago"]},{"id": "SC008","label": "明尼阿波利斯另类摇滚场景 1979–1991","type": "本地","nodes": ["B010","B011","E006","L007","P017","P018","P019","P020","P021","P022","P023","city_minneapolis"]},{"id": "SC009","label": "K 国际流行地下网络 1982–","type": "跨地域","nodes": ["B017","L005","P037","P038","P039","city_olympia"]},{"id": "SC010","label": "纽约艺术/噪音场景 1981–1990","type": "本地","nodes": ["B012","B028","P024","P025","P026","P027","city_ny"]},{"id": "SC011","label": "旧金山湾区朋克/硬核场景 1978–85","type": "本地","nodes": ["B036","L012","city_sf"]},{"id": "SC012","label": "D.C. Revolution Summer 1985","type": "本地","nodes": ["B007","B023","B024","E007","E010","L002","P009","P014","P015","P016","city_dc"]}];
 
 let activeScene = null;
 
@@ -928,6 +401,9 @@ const zoom = d3.zoom()
   .on('zoom', e => root.attr('transform', e.transform));
 
 svg.call(zoom);
+
+// 是否移动端（多处复用：触屏热区、标签精简、提示框底部抽屉、自适应缩放）
+const isMobile = () => window.innerWidth < 768;
 
 // 图例（点击可切换显示/隐藏某一类实体）
 const typeLabels = { Band:'乐队', Person:'人物', Label:'厂牌', City:'城市', Project:'组织/项目', Venue:'场地', Event:'事件' };
@@ -978,24 +454,28 @@ const sim = d3.forceSimulation(filteredNodes)
     if (d.type === 'appearance') return 0.5;
     return 0.6;
   }))
+  // 节点数量大幅增加（150+），加大斥力让网络铺得更开、减少重叠
   .force('charge', d3.forceManyBody().strength(d => {
-    if (d.type === 'City') return -300;
-    if (d.type === 'Label') return -350;
-    return -220;
+    if (d.type === 'City') return -520;
+    if (d.type === 'Label') return -560;
+    if (d.type === 'Band') return -320;
+    return -200;
   }))
   .force('center', d3.forceCenter(width / 2, height / 2))
   // 轻微向心力：把松散连接 / 不相连的子图（如波士顿 Mission of Burma 一支）拉回画面中心附近
-  .force('x', d3.forceX(width / 2).strength(0.06))
-  .force('y', d3.forceY(height / 2).strength(0.06))
-  .force('collision', d3.forceCollide().radius(d => nodeRadius(d) + 12));
+  .force('x', d3.forceX(width / 2).strength(0.05))
+  .force('y', d3.forceY(height / 2).strength(0.05))
+  .force('collision', d3.forceCollide().radius(d => nodeRadius(d) + 14));
 
+// 节点半径：移动端整体略放大，便于辨识与点按
 function nodeRadius(d) {
-  if (d.type === 'Label') return 18;
-  if (d.type === 'City') return 14;
-  if (d.type === 'Band') return 12;
-  if (d.type === 'Venue') return 10;
-  if (d.type === 'Event') return 7;
-  return 9;
+  const m = isMobile() ? 1.15 : 1;
+  if (d.type === 'Label') return 18 * m;
+  if (d.type === 'City') return 14 * m;
+  if (d.type === 'Band') return 12 * m;
+  if (d.type === 'Venue') return 10 * m;
+  if (d.type === 'Event') return 7 * m;
+  return 9 * m;
 }
 
 // 连线
@@ -1020,7 +500,14 @@ const nodeEl = root.append('g')
     .on('end',   (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; })
   );
 
+// 透明热区圆：扩大可点按/悬停范围（移动端尤其重要，手指比鼠标粗）
 nodeEl.append('circle')
+  .attr('class', 'hit')
+  .attr('r', d => nodeRadius(d) + (isMobile() ? 16 : 8))
+  .attr('fill', 'transparent');
+
+nodeEl.append('circle')
+  .attr('class', 'dot')
   .attr('r', nodeRadius)
   .attr('fill', d => COLORS[d.type] || '#888')
   .attr('fill-opacity', 0.72)
@@ -1028,13 +515,20 @@ nodeEl.append('circle')
   .attr('stroke-width', 1.5)
   .attr('stroke-opacity', 0.28);
 
+// 在移动端，默认只显示「锚点」类标签（城市/厂牌/乐队），其余在高亮时再显示，避免小屏文字糊成一团
+const ANCHOR_LABEL = new Set(['City', 'Label', 'Band']);
+function showLabelByDefault(d) {
+  return isMobile() ? ANCHOR_LABEL.has(d.type) : true;
+}
+
 nodeEl.append('text')
   .text(d => d.label)
   .attr('dy', d => nodeRadius(d) + 11)
   .attr('text-anchor', 'middle')
-  .attr('font-size', d => d.type === 'Label' ? 10 : d.type === 'City' ? 9 : 9)
+  .attr('font-size', d => d.type === 'Label' ? (isMobile() ? 11 : 10) : (isMobile() ? 10 : 9))
   .attr('fill', d => d.type === 'City' ? '#7ab87a' : '#b0aaa0')
-  .attr('letter-spacing', '0.04em');
+  .attr('letter-spacing', '0.04em')
+  .style('display', d => showLabelByDefault(d) ? null : 'none');
 
 // Tooltip & highlight
 const tooltip = document.getElementById('tooltip');
@@ -1057,21 +551,28 @@ function highlightNode(d) {
   linkEl.classed('dimmed', l => (l.source.id || l.source) !== d.id && (l.target.id || l.target) !== d.id);
   linkEl.classed('highlighted', l => (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id);
 
+  // 高亮时把相关节点的标签全部显示出来（移动端默认隐藏了次要标签）
+  nodeEl.selectAll('text').style('display', n =>
+    (connected.has(n.id) || showLabelByDefault(n)) ? null : 'none');
+
   ttName.textContent = d.label;
   ttType.textContent = `${typeZH[d.type]}`;
   ttType.style.color = COLORS[d.type];
   ttDetail.textContent = `${d.detail || ''}`;
-  tooltip.style.opacity = 1;
+  tooltip.classList.add('show');
 }
 
 function clearHighlight() {
   nodeEl.classed('dimmed', false).classed('highlighted', false);
   linkEl.classed('dimmed', false).classed('highlighted', false);
-  tooltip.style.opacity = 0;
+  // 还原默认标签可见性
+  nodeEl.selectAll('text').style('display', n => showLabelByDefault(n) ? null : 'none');
+  tooltip.classList.remove('show');
 }
 
-// 把提示框定位到指定屏幕坐标（避免溢出视口）
+// 把提示框定位到指定屏幕坐标（桌面端跟随光标；移动端固定为底部抽屉，见 CSS）
 function positionTooltip(clientX, clientY) {
+  if (isMobile()) { tooltip.style.left = ''; tooltip.style.top = ''; return; }
   const ttW = tooltip.offsetWidth || 260;
   const ttH = tooltip.offsetHeight || 120;
   let x = clientX + 16, y = clientY - 8;
@@ -1084,10 +585,10 @@ function positionTooltip(clientX, clientY) {
 }
 
 nodeEl
-  .on('mouseover', (e, d) => highlightNode(d))
-  .on('mousemove', e => positionTooltip(e.clientX, e.clientY))
-  .on('mouseout', clearHighlight)
-  // 触屏：点击节点高亮并显示详情；阻止冒泡，以免触发背景的清除
+  .on('mouseover', (e, d) => { if (!isMobile()) highlightNode(d); })
+  .on('mousemove', e => { if (!isMobile()) positionTooltip(e.clientX, e.clientY); })
+  .on('mouseout', () => { if (!isMobile()) clearHighlight(); })
+  // 触屏 / 点击：高亮并显示详情；阻止冒泡，以免触发背景的清除
   .on('click', function(e, d) {
     e.stopPropagation();
     highlightNode(d);
@@ -1107,20 +608,42 @@ sim.on('tick', () => {
 });
 
 // 统计
-document.getElementById('node-count').textContent = window.innerWidth < 768 ? '点节点看关系' : '悬停查看关系';
-document.getElementById('link-count').textContent = window.innerWidth < 768 ? '点空白清除' : '点击查看详情';
+document.getElementById('node-count').textContent = isMobile() ? '点节点看关系' : '悬停查看关系';
+document.getElementById('link-count').textContent = isMobile() ? '点空白清除' : '点击查看详情';
 
-// 小屏初始缩小，让整张网络在视口内可见
-const initialScale = window.innerWidth < 768 ? 0.9 : 1;
-svg.call(zoom.transform, d3.zoomIdentity.translate(width/2, height/2).scale(initialScale).translate(-width/2, -height/2));
+// 自适应缩放：根据所有节点的包围盒，把整张网络缩放/平移到视口内（留出边距）
+// 取代固定缩放——节点变多后能保证移动端首屏就能看到全貌
+function fitView(duration = 0) {
+  if (!filteredNodes.length) return;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  filteredNodes.forEach(n => {
+    if (n.x == null || n.y == null) return;
+    minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x);
+    minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y);
+  });
+  if (!isFinite(minX)) return;
+  const w = window.innerWidth, h = window.innerHeight;
+  const pad = isMobile() ? 48 : 90;
+  const gw = (maxX - minX) || 1, gh = (maxY - minY) || 1;
+  const scale = Math.min((w - pad * 2) / gw, (h - pad * 2) / gh, isMobile() ? 1.1 : 1.4);
+  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+  const t = d3.zoomIdentity.translate(w / 2, h / 2).scale(scale).translate(-cx, -cy);
+  (duration ? svg.transition().duration(duration) : svg).call(zoom.transform, t);
+}
+
+// 力导向收敛后自动适配一次首屏视图
+let fittedOnce = false;
+sim.on('end', () => { if (!fittedOnce) { fittedOnce = true; fitView(0); } });
+// 兜底：即使迟迟未触发 end，也在短暂预热后先适配一次
+setTimeout(() => fitView(0), 1200);
 
 // 控制按钮
 document.getElementById('btn-zoom-in').addEventListener('click', () =>
   svg.transition().call(zoom.scaleBy, 1.4));
 document.getElementById('btn-zoom-out').addEventListener('click', () =>
   svg.transition().call(zoom.scaleBy, 0.7));
-document.getElementById('btn-reset').addEventListener('click', () =>
-  svg.transition().duration(600).call(zoom.transform, d3.zoomIdentity.translate(window.innerWidth/2, window.innerHeight/2).scale(window.innerWidth < 768 ? 0.45 : 0.85).translate(-window.innerWidth/2, -window.innerHeight/2)));
+// 重置 = 重新适配全图
+document.getElementById('btn-reset').addEventListener('click', () => fitView(600));
 
 
 // ── Scene 叠加 ──
@@ -1142,7 +665,6 @@ sceneTitle.addEventListener('click', () => scenePanel.classList.toggle('collapse
 document.addEventListener('click', e => {
   if (!scenePanel.contains(e.target)) scenePanel.classList.add('collapsed');
 });
-const isMobile = () => window.innerWidth < 768;
 if (isMobile()) scenePanel.classList.add('collapsed');
 
 function activateScene(sc, btn) {
@@ -1166,12 +688,24 @@ function clearScene() {
   linkEl.style('opacity', null);
 }
 
+// 旋屏 / 窗口尺寸变化：更新力的中心、按当前断点重算半径与热区，并重新适配视图
+let resizeTimer = null;
 window.addEventListener('resize', () => {
   const w = window.innerWidth, h = window.innerHeight;
   sim.force('center', d3.forceCenter(w/2, h/2));
-  sim.force('x', d3.forceX(w/2).strength(0.06));
-  sim.force('y', d3.forceY(h/2).strength(0.06));
-  sim.alpha(0.3).restart();
+  sim.force('x', d3.forceX(w/2).strength(0.05));
+  sim.force('y', d3.forceY(h/2).strength(0.05));
+  // 跨断点时重算与移动端相关的视觉量
+  nodeEl.select('circle.dot').attr('r', nodeRadius);
+  nodeEl.select('circle.hit').attr('r', d => nodeRadius(d) + (isMobile() ? 16 : 8));
+  nodeEl.select('text')
+    .attr('dy', d => nodeRadius(d) + 11)
+    .style('display', d => showLabelByDefault(d) ? null : 'none');
+  document.getElementById('node-count').textContent = isMobile() ? '点节点看关系' : '悬停查看关系';
+  document.getElementById('link-count').textContent = isMobile() ? '点空白清除' : '点击查看详情';
+  sim.alpha(0.2).restart();
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => fitView(400), 350);
 });
 </script>
 </body>
