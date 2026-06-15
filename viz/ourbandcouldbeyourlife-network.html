@@ -144,7 +144,7 @@
     bottom: 24px; left: 24px;
     z-index: 10;
     font-size: 10px;
-    color: #444;
+    color: #666;
     letter-spacing: 0.08em;
     line-height: 1.8;
   }
@@ -157,7 +157,7 @@
   .node text { pointer-events: none; }
 
   .link {
-    stroke-opacity: 0.35;
+    stroke-opacity: 0.22;
     transition: stroke-opacity 0.2s;
   }
 
@@ -1023,10 +1023,10 @@ const nodeEl = root.append('g')
 nodeEl.append('circle')
   .attr('r', nodeRadius)
   .attr('fill', d => COLORS[d.type] || '#888')
-  .attr('fill-opacity', 0.85)
+  .attr('fill-opacity', 0.72)
   .attr('stroke', d => COLORS[d.type] || '#888')
   .attr('stroke-width', 1.5)
-  .attr('stroke-opacity', 0.4);
+  .attr('stroke-opacity', 0.28);
 
 nodeEl.append('text')
   .text(d => d.label)
@@ -1107,11 +1107,11 @@ sim.on('tick', () => {
 });
 
 // 统计
-document.getElementById('node-count').textContent = window.innerWidth < 768 ? '点节点看关系' : '节点数：' + filteredNodes.length;
-document.getElementById('link-count').textContent = window.innerWidth < 768 ? '点空白清除' : '关系数：' + filteredLinks.length;
+document.getElementById('node-count').textContent = window.innerWidth < 768 ? '点节点看关系' : '悬停查看关系';
+document.getElementById('link-count').textContent = window.innerWidth < 768 ? '点空白清除' : '点击查看详情';
 
 // 小屏初始缩小，让整张网络在视口内可见
-const initialScale = window.innerWidth < 768 ? 0.45 : 0.85;
+const initialScale = window.innerWidth < 768 ? 0.9 : 1;
 svg.call(zoom.transform, d3.zoomIdentity.translate(width/2, height/2).scale(initialScale).translate(-width/2, -height/2));
 
 // 控制按钮
