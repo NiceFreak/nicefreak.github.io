@@ -161,9 +161,9 @@
     transition: stroke-opacity 0.2s;
   }
 
-  .link.highlighted { stroke-opacity: 0.9; }
-  .link.dimmed { stroke-opacity: 0.05; }
-  .node.dimmed { opacity: 0.15; }
+  .link.highlighted { stroke-opacity: 0.95; }
+  .link.dimmed { stroke-opacity: 0.04; }
+  .node.dimmed { opacity: 0.12; }
   .node.highlighted { opacity: 1; }
 
   /* 场景叠加面板 */
@@ -298,7 +298,6 @@
 
 <div id="header">
   <h1>Our Band Could Be Your Life — 关系网络</h1>
-  <span>数据来源：Michael Azerrad《Our Band Could Be Your Life》 &nbsp;·&nbsp; 拖拽移动 &nbsp;·&nbsp; 滚轮缩放 &nbsp;·&nbsp; 点击节点查看详情 &nbsp;·&nbsp; 点击图例切换类型</span>
 </div>
 
 <div id="legend"></div>
@@ -317,7 +316,7 @@
 </div>
 
 <div id="info">
-  节点数：<span id="node-count">—</span> &nbsp;·&nbsp; 关系数：<span id="link-count">—</span>
+  <span id="node-count">—</span> &nbsp;·&nbsp; <span id="link-count">—</span>
 </div>
 
 <svg id="svg">
@@ -1059,9 +1058,9 @@ function highlightNode(d) {
   linkEl.classed('highlighted', l => (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id);
 
   ttName.textContent = d.label;
-  ttType.textContent = typeZH[d.type];
+  ttType.textContent = `${typeZH[d.type]}`;
   ttType.style.color = COLORS[d.type];
-  ttDetail.textContent = d.detail || '';
+  ttDetail.textContent = `${d.detail || ''}`;
   tooltip.style.opacity = 1;
 }
 
@@ -1108,8 +1107,8 @@ sim.on('tick', () => {
 });
 
 // 统计
-document.getElementById('node-count').textContent = filteredNodes.length;
-document.getElementById('link-count').textContent = filteredLinks.length;
+document.getElementById('node-count').textContent = window.innerWidth < 768 ? '点节点看关系' : '节点数：' + filteredNodes.length;
+document.getElementById('link-count').textContent = window.innerWidth < 768 ? '点空白清除' : '关系数：' + filteredLinks.length;
 
 // 小屏初始缩小，让整张网络在视口内可见
 const initialScale = window.innerWidth < 768 ? 0.45 : 0.85;
