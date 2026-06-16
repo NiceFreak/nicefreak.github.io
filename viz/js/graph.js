@@ -4,17 +4,20 @@ const root = d3.select('#root');
 const width = window.innerWidth;
 const height = window.innerHeight;
 
+// 是否移动端（多处复用：触屏热区、标签精简、提示框底部抽屉、自适应缩放）
+const isMobile = () => window.innerWidth < 768;
+const minReadableScale = () => isMobile() ? 0.72 : 0.35;
+const maxReadableScale = () => isMobile() ? 1.25 : 1.15;
+const clampScale = scale => Math.max(minReadableScale(), Math.min(scale, maxReadableScale()));
+
 const zoom = d3.zoom()
-  .scaleExtent([0.2, 4])
   .on('zoom', e => {
     root.attr('transform', e.transform);
     if (!highlightOn) applyLabelVisibility(e.transform.k);
   });
 
+zoom.scaleExtent([minReadableScale(), maxReadableScale()]);
 svg.call(zoom);
-
-// 是否移动端（多处复用：触屏热区、标签精简、提示框底部抽屉、自适应缩放）
-const isMobile = () => window.innerWidth < 768;
 
 // 图例（点击可切换显示/隐藏某一类实体）
 const legendEl = document.getElementById('legend');
@@ -279,7 +282,7 @@ function fieldGroundedInterpretation(d) {
 nodeEl.append('text')
   .attr('class', 'micro-label')
   .text(microContextLabel)
-  .attr('dy', d => nodeRadius(d) + 22)
+  .attr('dy', d => nodeRadius(d) + 32)
   .attr('text-anchor', 'middle');
 
 const interpretationEl = nodeEl.append('g')
@@ -288,13 +291,13 @@ const interpretationEl = nodeEl.append('g')
 
 interpretationEl.append('text')
   .attr('class', 'line-1')
-  .attr('dy', d => -(nodeRadius(d) + 18))
+  .attr('dy', d => nodeRadius(d) + 46)
   .attr('text-anchor', 'middle')
   .text(d => fieldGroundedInterpretation(d)[0]);
 
 interpretationEl.append('text')
   .attr('class', 'line-2')
-  .attr('dy', d => -(nodeRadius(d) + 7))
+  .attr('dy', d => nodeRadius(d) + 57)
   .attr('text-anchor', 'middle')
   .text(d => fieldGroundedInterpretation(d)[1]);
 
@@ -321,6 +324,10 @@ function focusNodesFromLinks(d, linksForFocus) {
     connected.add(endpointId(l.target));
   });
   return connected;
+}
+
+function visibleNeighborhoodIds(d) {
+  return focusNodesFromLinks(d, focusLinks(d, null));
 }
 
 function secondHopState(firstHopIds) {
@@ -455,16 +462,18 @@ function fitView(duration = 0) {
   });
   if (!isFinite(minX)) return;
   const w = window.innerWidth, h = window.innerHeight;
-  const pad = isMobile() ? 48 : 90;
+  const pad = isMobile() ? 26 : 72;
   const gw = (maxX - minX) || 1, gh = (maxY - minY) || 1;
-  const scale = Math.min((w - pad * 2) / gw, (h - pad * 2) / gh, isMobile() ? 1.1 : 1.4);
+  const scale = isMobile()
+    ? Math.min((w - pad * 2) / gw, (h - pad * 2) / gh, maxReadableScale())
+    : clampScale(Math.min((w - pad * 2) / gw, (h - pad * 2) / gh));
   const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
   const t = d3.zoomIdentity.translate(w / 2, h / 2).scale(scale).translate(-cx, -cy);
   (duration ? svg.transition().duration(duration) : svg).call(zoom.transform, t);
 }
 
-function focusNeighborhoodView(centerNode, connectedIds, duration = 0) {
-  const nodesForFrame = filteredNodes.filter(n => connectedIds.has(n.id) && isNodeVisible(n));
+function frameNodeSetView(centerNode, nodeIds, duration = 0, options = {}) {
+  const nodesForFrame = filteredNodes.filter(n => nodeIds.has(n.id) && isNodeVisible(n));
   if (!nodesForFrame.length || centerNode.x == null || centerNode.y == null) return;
   let maxDx = 0, maxDy = 0;
   nodesForFrame.forEach(n => {
@@ -474,19 +483,27 @@ function focusNeighborhoodView(centerNode, connectedIds, duration = 0) {
   });
 
   const w = window.innerWidth, h = window.innerHeight;
-  const leftPad = isMobile() ? 36 : 90;
-  const rightPad = isMobile() ? 36 : 300;
+  const leftPad = isMobile() ? 18 : 90;
+  const rightPad = isMobile() ? 18 : 300;
   const topPad = isMobile() ? 138 : 88;
   const bottomPad = isMobile() ? 92 : 94;
   const availableW = Math.max(220, w - leftPad - rightPad);
   const availableH = Math.max(220, h - topPad - bottomPad);
   const gw = Math.max(maxDx * 2, 120);
   const gh = Math.max(maxDy * 2, 120);
-  const scale = Math.min(availableW / gw, availableH / gh, isMobile() ? 1.55 : 1.9);
+  const currentScale = d3.zoomTransform(svg.node()).k;
+  const fitScale = Math.min(availableW / gw, availableH / gh);
+  const scale = options.allowInitialReadableScale
+    ? Math.min(Math.max(fitScale, minReadableScale()), maxReadableScale())
+    : currentScale;
   const targetX = leftPad + availableW / 2;
   const targetY = topPad + availableH / 2;
   const t = d3.zoomIdentity.translate(targetX, targetY).scale(scale).translate(-centerNode.x, -centerNode.y);
   (duration ? svg.transition().duration(duration) : svg).call(zoom.transform, t);
+}
+
+function focusNeighborhoodView(centerNode, connectedIds, duration = 0) {
+  frameNodeSetView(centerNode, connectedIds, duration);
 }
 
 // 焦点节点：连接最密集的枢纽（多为某座城市或核心厂牌），作为移动端的引导入口
@@ -504,15 +521,12 @@ const focusNode = computeFocusNode();
 
 // 入口视图：
 // - 桌面端：自适应铺满全图（空间足够、可悬停）
-// - 移动端：以接近真实大小的比例聚焦到枢纽节点附近，只露出局部，引导用户拖拽探索
+// - 移动端：fit 到入口枢纽的一阶邻域，避免把整张图压到不可识别
 function entryView(duration = 0) {
   if (!isMobile()) return fitView(duration);
   const f = focusNode;
   if (!f || f.x == null) return fitView(duration);
-  const w = window.innerWidth, h = window.innerHeight;
-  const scale = 1.05;
-  const t = d3.zoomIdentity.translate(w / 2, h / 2).scale(scale).translate(-f.x, -f.y);
-  (duration ? svg.transition().duration(duration) : svg).call(zoom.transform, t);
+  frameNodeSetView(f, visibleNeighborhoodIds(f), duration, { allowInitialReadableScale: true });
 }
 
 // 预热力导向：在首屏绘制前同步收敛到最终布局，然后只定位一次相机。
@@ -546,6 +560,7 @@ window.addEventListener('resize', () => {
   // 移动端忽略「仅高度变化」（多为地址栏显隐）——否则会无谓重排并让相机抖动
   if (isMobile() && w === lastW) return;
   lastW = w;
+  zoom.scaleExtent([minReadableScale(), maxReadableScale()]);
   sim.force('center', d3.forceCenter(w/2, h/2));
   sim.force('x', d3.forceX(w/2).strength(0.05));
   sim.force('y', d3.forceY(h/2).strength(0.05));
@@ -553,9 +568,9 @@ window.addEventListener('resize', () => {
   nodeEl.select('circle.dot').attr('r', nodeRadius);
   nodeEl.select('circle.hit').attr('r', d => nodeRadius(d) + (isMobile() ? 16 : 8));
   nodeEl.select('text.node-name').attr('dy', d => nodeRadius(d) + 11);
-  nodeEl.select('text.micro-label').attr('dy', d => nodeRadius(d) + 22);
-  nodeEl.select('g.micro-interpretation text.line-1').attr('dy', d => -(nodeRadius(d) + 18));
-  nodeEl.select('g.micro-interpretation text.line-2').attr('dy', d => -(nodeRadius(d) + 7));
+  nodeEl.select('text.micro-label').attr('dy', d => nodeRadius(d) + 32);
+  nodeEl.select('g.micro-interpretation text.line-1').attr('dy', d => nodeRadius(d) + 46);
+  nodeEl.select('g.micro-interpretation text.line-2').attr('dy', d => nodeRadius(d) + 57);
   if (!highlightOn) applyLabelVisibility();
   updateViewSummary();
   sim.alpha(0.2).restart();

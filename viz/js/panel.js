@@ -178,10 +178,8 @@ function compactLine(line, maxLength = 38) {
   return `${text.slice(0, maxLength - 1)}…`;
 }
 
-function compactFact(line, maxLength = 24) {
-  const text = cleanPhrase(line);
-  if (text.length <= maxLength) return text;
-  return `${text.slice(0, maxLength - 1)}…`;
+function compactFact(line) {
+  return cleanPhrase(line);
 }
 
 function isIdentitySignal(segment) {
@@ -211,14 +209,23 @@ function fieldGroundedFacts(d) {
 function identitySummary(d) {
   const segments = detailSegments(d).filter(isIdentitySignal);
   const important = segments.filter(s => !/^(创始人|联合创始人|旗下|成员|位于|大本营)[：:]/.test(s));
-  const picked = d.type === 'Label' && important.length ? important.slice(0, 2) : segments.slice(0, 2);
-  if (picked.length) return compactLine(picked.join('；'), 46);
+  const picked = (d.type === 'Label' && important.length ? important : segments)[0];
+  if (picked) return cleanPhrase(picked);
 
   const f = fieldGroundedFacts(d);
-  if (f.bands.length) return compactLine(`关联 ${joinNames(f.bands, 2)}`, 46);
-  if (f.roster.length) return compactLine(`旗下 ${joinNames(f.roster, 2)}`, 46);
-  if (f.localEntities.length) return compactLine(`承载 ${joinNames(f.localEntities, 2)}`, 46);
+  if (f.bands.length) return cleanPhrase(`关联 ${joinNames(f.bands, 2)}`);
+  if (f.roster.length) return cleanPhrase(`旗下 ${joinNames(f.roster, 2)}`);
+  if (f.localEntities.length) return cleanPhrase(`承载 ${joinNames(f.localEntities, 2)}`);
   return '';
+}
+
+function identityDetailFacts(d, summary) {
+  const summaryKey = cleanPhrase(summary).toLowerCase();
+  return detailSegments(d)
+    .filter(isIdentitySignal)
+    .filter(segment => cleanPhrase(segment).toLowerCase() !== summaryKey)
+    .filter(segment => !/^(创始人|联合创始人|旗下|成员|位于|大本营)[：:]/.test(segment))
+    .slice(0, 2);
 }
 
 function identityFacts(d) {
@@ -232,6 +239,8 @@ function identityFacts(d) {
     const joined = joinNames(items, limit);
     if (joined) add(`${label}: ${joined}`);
   };
+
+  identityDetailFacts(d, identitySummary(d)).forEach(add);
 
   if (d.type === 'Band') {
     addJoined('风格', f.styles);
@@ -263,7 +272,7 @@ function identityFacts(d) {
   if (facts.length < 3) addJoined('风格', f.styles);
   if (facts.length < 3 && f.city) add(`城市: ${f.city}`);
   if (facts.length < 3 && f.chapter) add(f.chapter);
-  return facts.slice(0, 3);
+  return facts.slice(0, 2);
 }
 
 // Focus controller & neighborhood state
