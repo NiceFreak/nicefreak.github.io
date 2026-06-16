@@ -288,6 +288,8 @@ function renderFocusController(d) {
   if (!d) {
     focusPanel.classList.remove('show');
     focusIdentity.classList.add('empty');
+    focusName.textContent = '';
+    focusType.textContent = '';
     focusSummary.textContent = '';
     focusFacts.replaceChildren();
     focusChips.replaceChildren();
@@ -306,7 +308,7 @@ function renderFocusController(d) {
     el.textContent = fact;
     focusFacts.appendChild(el);
   });
-  focusIdentity.classList.toggle('empty', !summary && !facts.length);
+  focusIdentity.classList.remove('empty');
   focusChips.replaceChildren();
 
   relationTypes.forEach(rel => {
