@@ -77,38 +77,73 @@
     flex-shrink: 0;
   }
 
-  #tooltip {
+  #focus-panel {
     position: fixed;
-    z-index: 20;
-    background: #1a1a1a;
-    border: 1px solid #333;
-    padding: 12px 16px;
-    font-size: 11px;
-    line-height: 1.6;
-    max-width: 260px;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.15s;
+    right: 24px; bottom: 132px;
+    z-index: 10;
+    width: min(240px, calc(100vw - 48px));
+    background: rgba(18,18,18,0.82);
+    border: 1px solid #2a2a2a;
+    padding: 12px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: auto;
+    backdrop-filter: blur(6px);
   }
-  #tooltip.show { opacity: 1; }
+  #focus-panel.show { display: flex; }
 
-  #tooltip .tt-name {
+  #focus-panel .fp-name {
     font-size: 13px;
     color: #e8e4dc;
-    margin-bottom: 4px;
     letter-spacing: 0.05em;
+    line-height: 1.35;
   }
 
-  #tooltip .tt-type {
+  #focus-panel .fp-type {
     font-size: 9px;
     text-transform: uppercase;
     letter-spacing: 0.15em;
-    margin-bottom: 8px;
   }
 
-  #tooltip .tt-detail {
+  #focus-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .rel-chip {
+    appearance: none;
+    border: 1px solid #333;
+    background: #171717;
     color: #888;
+    font-family: inherit;
     font-size: 10px;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    padding: 7px 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .rel-chip:hover {
+    color: #e8e4dc;
+    border-color: #555;
+    background: #222;
+  }
+
+  .rel-chip.active {
+    color: #e8e4dc;
+    border-color: currentColor;
+    background: #24211b;
+  }
+
+  .rel-chip:disabled {
+    color: #4a4a4a;
+    border-color: #262626;
+    background: #111;
+    cursor: default;
+    opacity: 0.65;
   }
 
   #controls {
@@ -171,6 +206,15 @@
   .link.dimmed { stroke-opacity: 0.04; }
   .node.dimmed { opacity: 0.12; }
   .node.highlighted { opacity: 1; }
+  .node.focus-center circle.dot {
+    stroke-opacity: 1;
+    stroke-width: 2.6;
+    filter: url(#glow);
+  }
+  .node.neighbor circle.dot {
+    stroke-opacity: 0.72;
+    stroke-width: 2;
+  }
 
   /* 场景叠加面板 */
   #scene-panel {
@@ -290,20 +334,12 @@
 
     #info { bottom: 12px; left: 12px; font-size: 9px; z-index: 5; max-width: calc(100vw - 24px); }
 
-    /* 移动端：详情提示改为贴底抽屉，避免漂浮在手指下、被边缘裁切 */
-    #tooltip {
-      left: 0 !important; right: 0; top: auto !important;
-      bottom: 0;
-      max-width: none; width: 100%;
-      border: none; border-top: 1px solid #333;
-      padding: 14px 18px calc(14px + env(safe-area-inset-bottom, 0px));
-      font-size: 12.5px; line-height: 1.7;
-      transform: translateY(100%);
-      transition: transform 0.2s ease, opacity 0.15s;
-      box-shadow: 0 -8px 24px rgba(0,0,0,0.5);
+    #focus-panel {
+      top: 112px; bottom: auto; left: 12px; right: 72px;
+      width: auto;
+      padding: 10px;
     }
-    #tooltip.show { transform: translateY(0); }
-    #tooltip .tt-detail { font-size: 12px; }
+    .rel-chip { font-size: 10px; padding: 8px; }
 
     .node text { font-size: 11px; }
   }
@@ -322,10 +358,10 @@
 <div id="legend"></div>
 <div id="scene-panel"><div id="scene-title">场景叠加</div><div id="scene-list"></div><div id="scene-clear" onclick="clearScene()">清除 ×</div></div>
 
-<div id="tooltip">
-  <div class="tt-name" id="tt-name"></div>
-  <div class="tt-type" id="tt-type"></div>
-  <div class="tt-detail" id="tt-detail"></div>
+<div id="focus-panel">
+  <div class="fp-name" id="focus-name"></div>
+  <div class="fp-type" id="focus-type"></div>
+  <div id="focus-chips"></div>
 </div>
 
 <div id="controls">
@@ -402,8 +438,18 @@ const scenes = [{"id": "SC001","label": "D.C. 硬核场景 1979–1983","type": 
 
 let activeScene = null;
 let activeNode = null;
+let activeRelationType = null;
 const viewSummaryEl = document.getElementById('view-summary');
 const typeLabels = { Band:'乐队', Person:'人物', Label:'厂牌', City:'城市', Project:'组织/项目', Venue:'场地', Event:'事件' };
+const relationTypes = [
+  { type: 'membership', label: '成员' },
+  { type: 'affiliation', label: '厂牌' },
+  { type: 'location_of', label: '地点' },
+  { type: 'collaboration', label: '合作' },
+  { type: 'succession', label: '前身/后继' },
+  { type: 'appearance', label: '出现' },
+];
+const relationLabels = Object.fromEntries(relationTypes.map(d => [d.type, d.label]));
 
 function isNodeVisible(d) {
   const inType = !hiddenTypes.has(d.type);
@@ -427,7 +473,8 @@ function updateViewSummary() {
   const visibleNodes = filteredNodes.filter(isNodeVisible).length;
   const visibleLinks = filteredLinks.filter(isLinkVisible).length;
   const parts = [activeScene ? activeScene.label : '全图'];
-  if (activeNode) parts.push(`选中：${activeNode.label}`);
+  if (activeNode) parts.push(`焦点：${activeNode.label}`);
+  if (activeRelationType) parts.push(`关系：${relationLabels[activeRelationType] || activeRelationType}`);
   const hidden = [...hiddenTypes].map(type => typeLabels[type] || type);
   if (hidden.length) parts.push(`隐藏：${hidden.join('、')}`);
   parts.push(`${visibleNodes} 个实体`);
@@ -466,6 +513,7 @@ Object.entries(typeLabels).forEach(([type, label]) => {
     item.classList.toggle('off', hiddenTypes.has(type));
     applyTypeFilter();
     if (activeNode && hiddenTypes.has(activeNode.type)) clearSelection();
+    else if (activeNode) applyFocusState(true);
     else updateViewSummary();
   });
   legendEl.appendChild(item);
@@ -599,84 +647,129 @@ nodeEl.append('text')
   .attr('fill', d => d.type === 'City' ? '#7ab87a' : '#b0aaa0')
   .attr('letter-spacing', '0.04em');
 
-// Tooltip & highlight
-const tooltip = document.getElementById('tooltip');
-const ttName = document.getElementById('tt-name');
-const ttType = document.getElementById('tt-type');
-const ttDetail = document.getElementById('tt-detail');
-
+// Focus controller & neighborhood state
+const focusPanel = document.getElementById('focus-panel');
+const focusName = document.getElementById('focus-name');
+const focusType = document.getElementById('focus-type');
+const focusChips = document.getElementById('focus-chips');
 const typeZH = { Band:'乐队', Person:'人物', Label:'厂牌', City:'城市', Project:'项目', Venue:'场地', Event:'事件' };
 
-// 高亮某个节点及其直接关系（hover 可临时预览，click 会持久选中）
-function highlightNode(d) {
-  const connected = new Set([d.id]);
-  filteredLinks.forEach(l => {
-    const sid = l.source.id || l.source;
-    const tid = l.target.id || l.target;
-    if (sid === d.id || tid === d.id) { connected.add(sid); connected.add(tid); }
+function endpointId(endpoint) {
+  return endpoint && endpoint.id ? endpoint.id : endpoint;
+}
+
+function linkTouchesNode(l, id) {
+  return endpointId(l.source) === id || endpointId(l.target) === id;
+}
+
+function focusLinks(d, relType = activeRelationType) {
+  return filteredLinks.filter(l => {
+    if (!linkTouchesNode(l, d.id)) return false;
+    if (relType && l.type !== relType) return false;
+    return isLinkVisible(l);
   });
+}
+
+function focusNodesFromLinks(d, linksForFocus) {
+  const connected = new Set([d.id]);
+  linksForFocus.forEach(l => {
+    connected.add(endpointId(l.source));
+    connected.add(endpointId(l.target));
+  });
+  return connected;
+}
+
+function renderFocusController(d) {
+  if (!d) {
+    focusPanel.classList.remove('show');
+    focusChips.replaceChildren();
+    return;
+  }
+  focusName.textContent = d.label;
+  focusType.textContent = typeZH[d.type] || d.type;
+  focusType.style.color = COLORS[d.type] || '#888';
+  focusChips.replaceChildren();
+
+  relationTypes.forEach(rel => {
+    const hasRelation = focusLinks(d, rel.type).length > 0;
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'rel-chip';
+    chip.textContent = rel.label;
+    chip.disabled = !hasRelation;
+    chip.classList.toggle('active', activeRelationType === rel.type);
+    chip.style.color = activeRelationType === rel.type ? (LINK_COLORS[rel.type] || '#e8e4dc') : '';
+    chip.addEventListener('click', e => {
+      e.stopPropagation();
+      activeRelationType = activeRelationType === rel.type ? null : rel.type;
+      applyFocusState(true);
+    });
+    focusChips.appendChild(chip);
+  });
+  focusPanel.classList.add('show');
+}
+
+function applyFocusState(reframe = false) {
+  if (!activeNode) {
+    clearFocusVisuals();
+    return;
+  }
+  if (activeRelationType && focusLinks(activeNode, activeRelationType).length === 0) {
+    activeRelationType = null;
+  }
+
+  const linksForFocus = focusLinks(activeNode);
+  const connected = focusNodesFromLinks(activeNode, linksForFocus);
+  const focusLinkSet = new Set(linksForFocus);
+
   nodeEl.classed('dimmed', n => !connected.has(n.id));
   nodeEl.classed('highlighted', n => connected.has(n.id));
-  linkEl.classed('dimmed', l => (l.source.id || l.source) !== d.id && (l.target.id || l.target) !== d.id);
-  linkEl.classed('highlighted', l => (l.source.id || l.source) === d.id || (l.target.id || l.target) === d.id);
+  nodeEl.classed('focus-center', n => n.id === activeNode.id);
+  nodeEl.classed('neighbor', n => n.id !== activeNode.id && connected.has(n.id));
+  linkEl.classed('dimmed', l => !focusLinkSet.has(l));
+  linkEl.classed('highlighted', l => focusLinkSet.has(l));
 
-  // 高亮时把相关节点的标签显示出来（连同始终可见的锚点标签）
+  // 焦点模式下只保留焦点邻域与锚点标签，迫使理解回到 graph。
   highlightOn = true;
   nodeEl.selectAll('text').style('display', n =>
     (connected.has(n.id) || ANCHOR_LABEL.has(n.type)) ? null : 'none');
 
-  ttName.textContent = d.label;
-  ttType.textContent = `${typeZH[d.type]}`;
-  ttType.style.color = COLORS[d.type];
-  ttDetail.textContent = `${d.detail || ''}`;
-  tooltip.classList.add('show');
+  renderFocusController(activeNode);
+  updateViewSummary();
+  if (reframe) focusNeighborhoodView(activeNode, connected, 520);
 }
 
-function clearHighlightVisuals() {
-  nodeEl.classed('dimmed', false).classed('highlighted', false);
+function clearFocusVisuals() {
+  nodeEl
+    .classed('dimmed', false)
+    .classed('highlighted', false)
+    .classed('focus-center', false)
+    .classed('neighbor', false);
   linkEl.classed('dimmed', false).classed('highlighted', false);
   // 还原为按当前缩放比例决定的标签可见性
   highlightOn = false;
   applyLabelVisibility();
-  tooltip.classList.remove('show');
+  renderFocusController(null);
 }
 
 function selectNode(d) {
   activeNode = d;
-  highlightNode(d);
-  updateViewSummary();
+  activeRelationType = null;
+  applyFocusState(true);
 }
 
 function clearSelection() {
   activeNode = null;
-  clearHighlightVisuals();
+  activeRelationType = null;
+  clearFocusVisuals();
   updateViewSummary();
 }
 
-// 把提示框定位到指定屏幕坐标（桌面端跟随光标；移动端固定为底部抽屉，见 CSS）
-function positionTooltip(clientX, clientY) {
-  if (isMobile()) { tooltip.style.left = ''; tooltip.style.top = ''; return; }
-  const ttW = tooltip.offsetWidth || 260;
-  const ttH = tooltip.offsetHeight || 120;
-  let x = clientX + 16, y = clientY - 8;
-  if (x + ttW > window.innerWidth)  x = clientX - ttW - 16;
-  if (x < 8) x = 8;
-  if (y + ttH > window.innerHeight) y = window.innerHeight - ttH - 8;
-  if (y < 8) y = 8;
-  tooltip.style.left = x + 'px';
-  tooltip.style.top  = y + 'px';
-}
-
 nodeEl
-  .on('mouseover', (e, d) => { if (!isMobile() && !activeNode) highlightNode(d); })
-  .on('mousemove', e => { if (!isMobile()) positionTooltip(e.clientX, e.clientY); })
-  .on('mouseout', () => { if (!isMobile() && !activeNode) clearHighlightVisuals(); })
-  // 触屏 / 点击：高亮并显示详情；阻止冒泡，以免触发背景的清除
+  // 点击节点只移动焦点；panel 只是关系控制层，不承载详情阅读。
   .on('click', function(e, d) {
     e.stopPropagation();
     selectNode(d);
-    const p = (e.touches && e.touches[0]) || e;
-    positionTooltip(p.clientX ?? window.innerWidth / 2, p.clientY ?? window.innerHeight / 2);
   });
 
 // 点击空白处清除高亮（移动端无 mouseout 时尤其重要）
@@ -713,6 +806,32 @@ function fitView(duration = 0) {
   const scale = Math.min((w - pad * 2) / gw, (h - pad * 2) / gh, isMobile() ? 1.1 : 1.4);
   const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
   const t = d3.zoomIdentity.translate(w / 2, h / 2).scale(scale).translate(-cx, -cy);
+  (duration ? svg.transition().duration(duration) : svg).call(zoom.transform, t);
+}
+
+function focusNeighborhoodView(centerNode, connectedIds, duration = 0) {
+  const nodesForFrame = filteredNodes.filter(n => connectedIds.has(n.id) && isNodeVisible(n));
+  if (!nodesForFrame.length || centerNode.x == null || centerNode.y == null) return;
+  let maxDx = 0, maxDy = 0;
+  nodesForFrame.forEach(n => {
+    if (n.x == null || n.y == null) return;
+    maxDx = Math.max(maxDx, Math.abs(n.x - centerNode.x));
+    maxDy = Math.max(maxDy, Math.abs(n.y - centerNode.y));
+  });
+
+  const w = window.innerWidth, h = window.innerHeight;
+  const leftPad = isMobile() ? 36 : 90;
+  const rightPad = isMobile() ? 36 : 300;
+  const topPad = isMobile() ? 138 : 88;
+  const bottomPad = isMobile() ? 92 : 94;
+  const availableW = Math.max(220, w - leftPad - rightPad);
+  const availableH = Math.max(220, h - topPad - bottomPad);
+  const gw = Math.max(maxDx * 2, 120);
+  const gh = Math.max(maxDy * 2, 120);
+  const scale = Math.min(availableW / gw, availableH / gh, isMobile() ? 1.55 : 1.9);
+  const targetX = leftPad + availableW / 2;
+  const targetY = topPad + availableH / 2;
+  const t = d3.zoomIdentity.translate(targetX, targetY).scale(scale).translate(-centerNode.x, -centerNode.y);
   (duration ? svg.transition().duration(duration) : svg).call(zoom.transform, t);
 }
 
@@ -760,8 +879,11 @@ document.getElementById('btn-zoom-in').addEventListener('click', () =>
   svg.transition().call(zoom.scaleBy, 1.4));
 document.getElementById('btn-zoom-out').addEventListener('click', () =>
   svg.transition().call(zoom.scaleBy, 0.7));
-// 重置 = 回到入口视图（桌面铺满全图 / 移动端回到枢纽）
-document.getElementById('btn-reset').addEventListener('click', () => entryView(600));
+// 重置 = 清除焦点并回到入口视图（桌面铺满全图 / 移动端回到枢纽）
+document.getElementById('btn-reset').addEventListener('click', () => {
+  clearSelection();
+  entryView(600);
+});
 
 
 // ── Scene 叠加 ──
@@ -788,7 +910,10 @@ if (isMobile()) scenePanel.classList.add('collapsed');
 function activateScene(sc, btn) {
   if (activeScene && activeScene.id === sc.id) { clearScene(); return; }
   activeScene = sc;
-  if (activeNode && !(sc.nodes || []).includes(activeNode.id)) activeNode = null;
+  if (activeNode && !(sc.nodes || []).includes(activeNode.id)) {
+    activeNode = null;
+    activeRelationType = null;
+  }
   document.querySelectorAll('.scene-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const inScene = new Set(sc.nodes);
@@ -796,8 +921,8 @@ function activateScene(sc, btn) {
   nodeEl.classed('scene-dim', d => !inScene.has(d.id));
   linkEl.style('opacity', l =>
     inScene.has(l.source.id) && inScene.has(l.target.id) ? 0.8 : 0.04);
-  if (activeNode) highlightNode(activeNode);
-  else clearHighlightVisuals();
+  if (activeNode) applyFocusState(true);
+  else clearFocusVisuals();
   updateViewSummary();
   // 移动端选定后自动收起面板，露出图形
   if (isMobile()) scenePanel.classList.add('collapsed');
@@ -808,8 +933,8 @@ function clearScene() {
   document.querySelectorAll('.scene-btn').forEach(b => b.classList.remove('active'));
   nodeEl.classed('scene-lit', false).classed('scene-dim', false);
   linkEl.style('opacity', null);
-  if (activeNode) highlightNode(activeNode);
-  else clearHighlightVisuals();
+  if (activeNode) applyFocusState(true);
+  else clearFocusVisuals();
   updateViewSummary();
 }
 
