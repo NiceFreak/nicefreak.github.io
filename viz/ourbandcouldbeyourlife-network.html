@@ -106,6 +106,47 @@
     letter-spacing: 0.15em;
   }
 
+  #focus-panel .fp-identity {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  #focus-panel .fp-identity.empty {
+    display: none;
+  }
+
+  #focus-panel .fp-summary {
+    color: #d4cfc5;
+    font-size: 11px;
+    line-height: 1.45;
+    letter-spacing: 0.03em;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  #focus-panel .fp-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  #focus-panel .fp-fact {
+    border: 1px solid #303030;
+    background: #151515;
+    color: #8e887e;
+    font-size: 9px;
+    line-height: 1;
+    letter-spacing: 0.03em;
+    padding: 5px 6px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   #focus-chips {
     display: flex;
     flex-wrap: wrap;
@@ -414,6 +455,10 @@
 <div id="focus-panel">
   <div class="fp-name" id="focus-name"></div>
   <div class="fp-type" id="focus-type"></div>
+  <div class="fp-identity empty" id="focus-identity">
+    <div class="fp-summary" id="focus-summary"></div>
+    <div class="fp-facts" id="focus-facts"></div>
+  </div>
   <div id="focus-chips"></div>
 </div>
 
@@ -939,6 +984,17 @@ function compactLine(line, maxLength = 38) {
   return `${text.slice(0, maxLength - 1)}…`;
 }
 
+function compactFact(line, maxLength = 24) {
+  const text = cleanPhrase(line);
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 1)}…`;
+}
+
+function isIdentitySignal(segment) {
+  const text = cleanPhrase(segment);
+  return text.length > 1 && /[\p{Script=Han}A-Za-z]/u.test(text);
+}
+
 function fieldGroundedFacts(d) {
   const succession = successionAnchors(d);
   return {
@@ -956,6 +1012,64 @@ function fieldGroundedFacts(d) {
     successors: succession.successors,
     summary: summaryAnchor(d),
   };
+}
+
+function identitySummary(d) {
+  const segments = detailSegments(d).filter(isIdentitySignal);
+  const important = segments.filter(s => !/^(创始人|联合创始人|旗下|成员|位于|大本营)[：:]/.test(s));
+  const picked = d.type === 'Label' && important.length ? important.slice(0, 2) : segments.slice(0, 2);
+  if (picked.length) return compactLine(picked.join('；'), 46);
+
+  const f = fieldGroundedFacts(d);
+  if (f.bands.length) return compactLine(`关联 ${joinNames(f.bands, 2)}`, 46);
+  if (f.roster.length) return compactLine(`旗下 ${joinNames(f.roster, 2)}`, 46);
+  if (f.localEntities.length) return compactLine(`承载 ${joinNames(f.localEntities, 2)}`, 46);
+  return '';
+}
+
+function identityFacts(d) {
+  const f = fieldGroundedFacts(d);
+  const facts = [];
+  const add = value => {
+    const fact = compactFact(value);
+    if (fact && !facts.includes(fact)) facts.push(fact);
+  };
+  const addJoined = (label, items, limit = 2) => {
+    const joined = joinNames(items, limit);
+    if (joined) add(`${label}: ${joined}`);
+  };
+
+  if (d.type === 'Band') {
+    addJoined('风格', f.styles);
+    if (f.city) add(`城市: ${f.city}`);
+    addJoined('厂牌', f.labels, 1);
+    if (f.chapter) add(f.chapter);
+  } else if (d.type === 'Person') {
+    addJoined('乐队', f.bands);
+    if (f.city) add(`场景: ${f.city}`);
+    if (f.chapter) add(f.chapter);
+  } else if (d.type === 'Label') {
+    addJoined('旗下', f.roster);
+    if (f.city) add(`城市: ${f.city}`);
+    if (f.chapter) add(f.chapter);
+  } else if (d.type === 'City') {
+    addJoined('关联', f.localEntities);
+    if (f.scene) add(f.scene);
+    if (f.chapter) add(f.chapter);
+  } else if (d.type === 'Venue' || d.type === 'Event') {
+    if (f.city) add(`城市: ${f.city}`);
+    addJoined('相关', f.bands);
+    if (f.chapter) add(f.chapter);
+  } else {
+    addJoined('相关', f.bands);
+    if (f.city) add(`场景: ${f.city}`);
+    if (f.chapter) add(f.chapter);
+  }
+
+  if (facts.length < 3) addJoined('风格', f.styles);
+  if (facts.length < 3 && f.city) add(`城市: ${f.city}`);
+  if (facts.length < 3 && f.chapter) add(f.chapter);
+  return facts.slice(0, 3);
 }
 
 function fieldGroundedInterpretation(d) {
@@ -1048,6 +1162,9 @@ interpretationEl.append('text')
 const focusPanel = document.getElementById('focus-panel');
 const focusName = document.getElementById('focus-name');
 const focusType = document.getElementById('focus-type');
+const focusIdentity = document.getElementById('focus-identity');
+const focusSummary = document.getElementById('focus-summary');
+const focusFacts = document.getElementById('focus-facts');
 const focusChips = document.getElementById('focus-chips');
 
 function endpointId(endpoint) {
@@ -1104,12 +1221,26 @@ function isStepTraceLink(l) {
 function renderFocusController(d) {
   if (!d) {
     focusPanel.classList.remove('show');
+    focusIdentity.classList.add('empty');
+    focusSummary.textContent = '';
+    focusFacts.replaceChildren();
     focusChips.replaceChildren();
     return;
   }
   focusName.textContent = d.label;
   focusType.textContent = formatLabel('type', d.type);
   focusType.style.color = COLORS[d.type] || '#888';
+  const summary = identitySummary(d);
+  const facts = identityFacts(d);
+  focusSummary.textContent = summary;
+  focusFacts.replaceChildren();
+  facts.forEach(fact => {
+    const el = document.createElement('span');
+    el.className = 'fp-fact';
+    el.textContent = fact;
+    focusFacts.appendChild(el);
+  });
+  focusIdentity.classList.toggle('empty', !summary && !facts.length);
   focusChips.replaceChildren();
 
   relationTypes.forEach(rel => {
