@@ -207,6 +207,23 @@
     fill: #a8a197;
     opacity: 0.88;
   }
+  .node .micro-interpretation {
+    pointer-events: none;
+  }
+  .node .micro-interpretation text {
+    fill: #d4cfc5;
+    font-size: 8px;
+    letter-spacing: 0.02em;
+    opacity: 0.86;
+    paint-order: stroke;
+    stroke: rgba(14,14,14,0.88);
+    stroke-width: 2.5px;
+    stroke-linejoin: round;
+  }
+  .node .micro-interpretation .line-2 {
+    fill: #a59d92;
+    opacity: 0.76;
+  }
 
   .link {
     stroke-opacity: 0.22;
@@ -742,11 +759,67 @@ function microContextLabel(d) {
   return label.length > 18 ? `${label.slice(0, 15)}...` : label;
 }
 
+function relationProfile(d) {
+  const linksByType = new Map();
+  filteredLinks.forEach(l => {
+    if (rawEndpointId(l.source) !== d.id && rawEndpointId(l.target) !== d.id) return;
+    if (!isLinkVisible(l)) return;
+    linksByType.set(l.type, (linksByType.get(l.type) || 0) + 1);
+  });
+  return linksByType;
+}
+
+function dominantRelationLabel(profile) {
+  let best = null, count = 0;
+  profile.forEach((value, key) => {
+    if (value > count) { best = key; count = value; }
+  });
+  return best ? formatLabel('relation', best) : '关系';
+}
+
+function structuralInterpretation(d) {
+  const profile = relationProfile(d);
+  const degree = [...profile.values()].reduce((sum, value) => sum + value, 0);
+  const rel = dominantRelationLabel(profile);
+  const place = d.type === 'City' ? placeAnchorFromNodeId(d.id) : directCityAnchor(d.id) || indirectCityAnchor(d);
+  const lines = [];
+
+  if (d.type === 'Label') lines.push(`以${rel}关系组织周边节点`);
+  else if (d.type === 'City') lines.push(`${place || d.label}场景的空间锚点`);
+  else if (d.type === 'Person') lines.push(`通过${rel}关系连接不同实体`);
+  else if (d.type === 'Band') lines.push(`在${rel}关系中形成邻域核心`);
+  else lines.push(`通过${rel}关系进入网络`);
+
+  if (degree >= 6) lines.push('邻域密度高，可继续横向移动');
+  else if (profile.has('succession')) lines.push('连接前身/后继的演化路径');
+  else if (profile.has('location_of') && place) lines.push(`与${place}场景形成定位`);
+  else if (profile.has('collaboration')) lines.push('合作边提供下一步延展');
+  else lines.push('一阶邻域提供下一步入口');
+
+  return lines.slice(0, 2);
+}
+
 nodeEl.append('text')
   .attr('class', 'micro-label')
   .text(microContextLabel)
   .attr('dy', d => nodeRadius(d) + 22)
   .attr('text-anchor', 'middle');
+
+const interpretationEl = nodeEl.append('g')
+  .attr('class', 'micro-interpretation')
+  .style('display', 'none');
+
+interpretationEl.append('text')
+  .attr('class', 'line-1')
+  .attr('dy', d => -(nodeRadius(d) + 18))
+  .attr('text-anchor', 'middle')
+  .text(d => structuralInterpretation(d)[0]);
+
+interpretationEl.append('text')
+  .attr('class', 'line-2')
+  .attr('dy', d => -(nodeRadius(d) + 7))
+  .attr('text-anchor', 'middle')
+  .text(d => structuralInterpretation(d)[1]);
 
 // Focus controller & neighborhood state
 const focusPanel = document.getElementById('focus-panel');
@@ -866,6 +939,8 @@ function applyFocusState(reframe = false) {
     (connected.has(n.id) || ANCHOR_LABEL.has(n.type)) ? null : 'none');
   nodeEl.selectAll('text.micro-label').style('display', n =>
     (connected.has(n.id) || secondHopIds.has(n.id)) ? null : 'none');
+  nodeEl.selectAll('g.micro-interpretation').style('display', n =>
+    n.id === activeNode.id ? null : 'none');
 
   renderFocusController(activeNode);
   updateViewSummary();
@@ -884,6 +959,7 @@ function clearFocusVisuals() {
   // 还原为按当前缩放比例决定的标签可见性
   highlightOn = false;
   applyLabelVisibility();
+  nodeEl.selectAll('g.micro-interpretation').style('display', 'none');
   renderFocusController(null);
 }
 
@@ -1092,6 +1168,8 @@ window.addEventListener('resize', () => {
   nodeEl.select('circle.hit').attr('r', d => nodeRadius(d) + (isMobile() ? 16 : 8));
   nodeEl.select('text.node-name').attr('dy', d => nodeRadius(d) + 11);
   nodeEl.select('text.micro-label').attr('dy', d => nodeRadius(d) + 22);
+  nodeEl.select('g.micro-interpretation text.line-1').attr('dy', d => -(nodeRadius(d) + 18));
+  nodeEl.select('g.micro-interpretation text.line-2').attr('dy', d => -(nodeRadius(d) + 7));
   if (!highlightOn) applyLabelVisibility();
   updateViewSummary();
   sim.alpha(0.2).restart();
