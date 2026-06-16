@@ -27,6 +27,159 @@
   letter-spacing: 0.15em;
 }
 
+/* 关系轨迹：把走过的节点链串成一句可读的叙事，可逐级回退 */
+#focus-panel .fp-trail {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+}
+#focus-panel .fp-trail.show { display: flex; }
+
+#focus-panel .ft-heading {
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #8a8378;
+}
+
+#focus-panel .ft-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px 4px;
+  max-height: 132px;
+  overflow-y: auto;
+}
+
+#focus-panel .ft-node {
+  appearance: none;
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: #cfcabf;
+  background: #1d1d1d;
+  border: 1px solid #383838;
+  border-left: 2px solid var(--node-color, #888);
+  padding: 3px 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  overflow-wrap: anywhere;
+}
+#focus-panel .ft-node:hover { color: #e8e4dc; border-color: #555; background: #242424; }
+#focus-panel .ft-node.current {
+  color: #e8e4dc;
+  background: #24211b;
+  border-color: var(--node-color, #888);
+  cursor: default;
+}
+
+#focus-panel .ft-rel {
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  color: #8f8a80;
+  white-space: nowrap;
+}
+#focus-panel .ft-rel.indirect { color: #5f584e; }
+
+/* 世系回放控件：沿 succession 簇逐级推进“时间的路” */
+#focus-panel .fp-lineage {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 9px;
+  border-top: 1px solid #2b2b2b;
+}
+#focus-panel .fp-lineage.show { display: flex; }
+
+#focus-panel .fl-heading {
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a8378;
+}
+
+#focus-panel .fl-row {
+  display: flex;
+  gap: 6px;
+}
+
+#focus-panel .fl-btn {
+  appearance: none;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  color: #cfcabf;
+  background: #1d1d1d;
+  border: 1px solid #3c3c3c;
+  padding: 7px 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  overflow-wrap: anywhere;
+}
+#focus-panel .fl-btn:hover:not(:disabled) { color: #e8e4dc; border-color: #555; background: #242424; }
+#focus-panel .fl-btn:disabled { color: #4a4a4a; border-color: #262626; background: #111; cursor: default; }
+#focus-panel .fl-next { flex: 1; text-align: left; }
+#focus-panel .fl-enter { width: 100%; text-align: center; color: #c9a94e; border-color: #5a4f30; background: #221f17; }
+#focus-panel .fl-enter:hover { color: #e0c873; border-color: #c9a94e; background: #2a2419; }
+
+/* 关系实质条：走过一步时显示这条连接到底是什么 */
+#focus-panel .fp-edge {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: rgba(42,38,28,0.55);
+  border-left: 2px solid #6a6258;
+}
+#focus-panel .fp-edge.show { display: flex; }
+
+#focus-panel .fe-heading {
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #8a8378;
+}
+
+#focus-panel .fe-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 1px;
+}
+
+#focus-panel .fe-type {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+  padding: 2px 6px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+}
+
+#focus-panel .fe-year {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: #9b9488;
+}
+
+#focus-panel .fe-path {
+  font-size: 11px;
+  color: #e8e4dc;
+  line-height: 1.4;
+  letter-spacing: 0.03em;
+  overflow-wrap: anywhere;
+}
+
+#focus-panel .fe-fact {
+  font-size: 10px;
+  color: #c2bcb1;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+
 #focus-panel .fp-identity {
   display: flex;
   flex-direction: column;

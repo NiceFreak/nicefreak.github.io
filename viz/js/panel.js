@@ -313,14 +313,209 @@ function identityFacts(d) {
   return facts.slice(0, 3);
 }
 
+// ── 关系实质：走过一步时，回答“他们到底是怎么连上的” ──
+// 只用数据里已有的字段：关系类型、两端节点、连接标签，以及标签/端点里本就出现的年份。
+function extractYear(text) {
+  const m = String(text || '').match(/\b(19[5-9]\d|20[0-2]\d)\b/);
+  return m ? m[1] : '';
+}
+
+function describeStepEdges() {
+  if (typeof stepTraceLinks !== 'function') return [];
+  return stepTraceLinks().map(l => {
+    const source = nodeById.get(rawEndpointId(l.source));
+    const target = nodeById.get(rawEndpointId(l.target));
+    const fact = cleanPhrase(l.label);
+    return {
+      type: l.type,
+      typeLabel: formatLabel('relation', l.type),
+      color: LINK_COLORS[l.type] || '#b0aaa0',
+      source: source ? source.label : rawEndpointId(l.source),
+      target: target ? target.label : rawEndpointId(l.target),
+      fact,
+      // 年份只取标签 / 端点名称里本就写明的，不推断、不编造
+      year: extractYear(fact) || extractYear(source && source.label) || extractYear(target && target.label),
+    };
+  });
+}
+
+// 乐队的绝对年份锚点：取它挂着的、label 带年份的 Event 中最早的一个。
+// 没有就返回空——只用已有 Event 标签，不从 prose 或 chapter 推断。
+function bandYearAnchor(bandId) {
+  const yrs = [];
+  filteredLinks.forEach(l => {
+    if (l.type !== 'appearance') return;
+    const s = rawEndpointId(l.source), t = rawEndpointId(l.target);
+    if (s !== bandId && t !== bandId) return;
+    const other = nodeById.get(s === bandId ? t : s);
+    if (other && other.type === 'Event') {
+      const y = extractYear(other.label);
+      if (y) yrs.push(Number(y));
+    }
+  });
+  return yrs.length ? String(Math.min(...yrs)) : '';
+}
+
 // Focus controller & neighborhood state
 const focusPanel = document.getElementById('focus-panel');
+const focusTrail = document.getElementById('focus-trail');
+const focusEdge = document.getElementById('focus-edge');
+const focusLineage = document.getElementById('focus-lineage');
 const focusName = document.getElementById('focus-name');
 const focusType = document.getElementById('focus-type');
 const focusIdentity = document.getElementById('focus-identity');
 const focusSummary = document.getElementById('focus-summary');
 const focusFacts = document.getElementById('focus-facts');
 const focusChips = document.getElementById('focus-chips');
+
+// 把走过的节点链串成一句可读的关系轨迹：A —[合作]→ B —[成员]→ C。
+// 方向按行走顺序（trail[i] → trail[i+1]）；点击较早的节点逐级回退。
+function renderTrail() {
+  focusTrail.replaceChildren();
+  // 世系回放时即便只有起点也显示（读作“时间的路”）；普通轨迹需≥2步才成链。
+  const minLen = lineageMode ? 1 : 2;
+  if (!trail || trail.length < minLen) {
+    focusTrail.classList.remove('show');
+    return;
+  }
+  const heading = document.createElement('div');
+  heading.className = 'ft-heading';
+  heading.textContent = lineageMode ? '世系 · 时间由早到晚' : '轨迹';
+  focusTrail.appendChild(heading);
+
+  const chain = document.createElement('div');
+  chain.className = 'ft-chain';
+  trail.forEach((n, i) => {
+    if (i > 0) {
+      const link = (typeof directLinkBetween === 'function')
+        ? directLinkBetween(trail[i - 1].id, n.id) : null;
+      const sep = document.createElement('span');
+      sep.className = 'ft-rel';
+      if (link) {
+        sep.textContent = `—${formatLabel('relation', link.type)}→`;
+        sep.style.color = LINK_COLORS[link.type] || '';
+      } else {
+        // 非直接相邻（如经由二阶节点跳过来）：中性箭头，不编造关系
+        sep.textContent = '→';
+        sep.classList.add('indirect');
+      }
+      chain.appendChild(sep);
+    }
+    const isCurrent = i === trail.length - 1;
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'ft-node';
+    chip.classList.toggle('current', isCurrent);
+    // 世系回放时给乐队挂上绝对年份锚点；无年份则只显示相对位置（不编造）。
+    const year = (lineageMode && n.type === 'Band') ? bandYearAnchor(n.id) : '';
+    chip.textContent = year ? `${n.label} · ${year}` : n.label;
+    chip.style.setProperty('--node-color', COLORS[n.type] || '#888');
+    if (!isCurrent) {
+      chip.addEventListener('click', e => {
+        e.stopPropagation();
+        selectNode(n);
+      });
+    }
+    chain.appendChild(chip);
+  });
+  focusTrail.appendChild(chain);
+  focusTrail.classList.add('show');
+  // 轨迹变长时滚动到最新一步
+  chain.scrollTop = chain.scrollHeight;
+}
+
+function renderEdgeBanner() {
+  focusEdge.replaceChildren();
+  const edges = describeStepEdges();
+  if (!edges.length) {
+    focusEdge.classList.remove('show');
+    return;
+  }
+  const heading = document.createElement('div');
+  heading.className = 'fe-heading';
+  heading.textContent = '这一步的关系';
+  focusEdge.appendChild(heading);
+
+  edges.forEach(e => {
+    const row = document.createElement('div');
+    row.className = 'fe-row';
+    const tag = document.createElement('span');
+    tag.className = 'fe-type';
+    tag.textContent = e.typeLabel;
+    tag.style.color = e.color;
+    tag.style.borderColor = e.color;
+    row.appendChild(tag);
+    if (e.year) {
+      const y = document.createElement('span');
+      y.className = 'fe-year';
+      y.textContent = e.year;
+      row.appendChild(y);
+    }
+    focusEdge.appendChild(row);
+
+    const path = document.createElement('div');
+    path.className = 'fe-path';
+    path.textContent = `${e.source} → ${e.target}`;
+    focusEdge.appendChild(path);
+
+    if (e.fact) {
+      const fact = document.createElement('div');
+      fact.className = 'fe-fact';
+      fact.textContent = e.fact;
+      focusEdge.appendChild(fact);
+    }
+  });
+  focusEdge.classList.add('show');
+}
+
+// 世系回放控件：当前乐队属于某 succession 簇时可进入；进入后沿前身→后继逐级推进。
+function renderLineageControl() {
+  focusLineage.replaceChildren();
+  const d = activeNode;
+  const canEnter = d && d.type === 'Band' && typeof hasLineage === 'function' && hasLineage(d.id);
+  if (!lineageMode && !canEnter) {
+    focusLineage.classList.remove('show');
+    return;
+  }
+
+  if (lineageMode) {
+    const head = document.createElement('div');
+    head.className = 'fl-heading';
+    head.textContent = `世系回放 · 第 ${lineageIndex + 1} / ${lineagePath.length} 步`;
+    focusLineage.appendChild(head);
+
+    const row = document.createElement('div');
+    row.className = 'fl-row';
+
+    const prev = document.createElement('button');
+    prev.type = 'button';
+    prev.className = 'fl-btn';
+    prev.textContent = '◀ 更早';
+    prev.disabled = lineageIndex <= 0;
+    prev.addEventListener('click', e => { e.stopPropagation(); lineageStep(-1); });
+
+    const atEnd = lineageIndex >= lineagePath.length - 1;
+    const nextNode = atEnd ? null : lineagePath[lineageIndex + 1];
+    const next = document.createElement('button');
+    next.type = 'button';
+    next.className = 'fl-btn fl-next';
+    next.textContent = nextNode ? `更晚 ▶ ${nextNode.label}` : '已到世系末端';
+    next.disabled = atEnd;
+    next.addEventListener('click', e => { e.stopPropagation(); lineageStep(1); });
+
+    row.appendChild(prev);
+    row.appendChild(next);
+    focusLineage.appendChild(row);
+  } else {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'fl-btn fl-enter';
+    btn.textContent = '▶ 沿世系回放（时间由早到晚）';
+    btn.addEventListener('click', e => { e.stopPropagation(); startLineageReplay(d); });
+    focusLineage.appendChild(btn);
+  }
+  focusLineage.classList.add('show');
+}
 
 function renderFocusController(d) {
   if (!d) {
@@ -331,8 +526,17 @@ function renderFocusController(d) {
     focusSummary.textContent = '';
     focusFacts.replaceChildren();
     focusChips.replaceChildren();
+    focusEdge.replaceChildren();
+    focusEdge.classList.remove('show');
+    focusTrail.replaceChildren();
+    focusTrail.classList.remove('show');
+    focusLineage.replaceChildren();
+    focusLineage.classList.remove('show');
     return;
   }
+  renderTrail();
+  renderEdgeBanner();
+  renderLineageControl();
   focusName.textContent = d.label;
   focusType.textContent = formatLabel('type', d.type);
   focusType.style.color = COLORS[d.type] || '#888';

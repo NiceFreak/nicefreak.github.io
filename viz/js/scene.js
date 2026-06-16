@@ -24,12 +24,18 @@ if (isMobile()) scenePanel.classList.add('collapsed');
 function activateScene(sc, btn) {
   if (activeScene && activeScene.id === sc.id) { clearScene(); return; }
   activeScene = sc;
-  if (activeNode && !(sc.nodes || []).includes(activeNode.id)) {
-    activeNode = null;
-    previousNode = null;
+  const sceneIds = new Set(sc.nodes || []);
+  if (activeNode && !sceneIds.has(activeNode.id)) {
+    // 当前焦点不在新场景里：清空轨迹，重新开始
+    trail.length = 0;
     activeRelationType = null;
+  } else {
+    // 仅保留落在场景内的轨迹节点（断开处由面包屑以中性箭头表示）
+    const kept = trail.filter(n => sceneIds.has(n.id));
+    trail.length = 0;
+    kept.forEach(n => trail.push(n));
   }
-  if (previousNode && !(sc.nodes || []).includes(previousNode.id)) previousNode = null;
+  syncTrailDerived();
   document.querySelectorAll('.scene-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const inScene = new Set(sc.nodes);
