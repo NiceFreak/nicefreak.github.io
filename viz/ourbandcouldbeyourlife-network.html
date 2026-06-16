@@ -412,7 +412,7 @@
 
 <svg id="svg">
   <defs>
-    <filter id="glow">
+    <filter id="glow" x="-120%" y="-120%" width="340%" height="340%" filterUnits="objectBoundingBox">
       <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
       <feMerge>
         <feMergeNode in="coloredBlur"/>
@@ -478,15 +478,23 @@ let previousNode = null;
 let activeRelationType = null;
 const viewSummaryEl = document.getElementById('view-summary');
 const typeLabels = { Band:'乐队', Person:'人物', Label:'厂牌', City:'城市', Project:'组织/项目', Venue:'场地', Event:'事件' };
-const relationTypes = [
-  { type: 'membership', label: '成员' },
-  { type: 'affiliation', label: '厂牌' },
-  { type: 'location_of', label: '地点' },
-  { type: 'collaboration', label: '合作' },
-  { type: 'succession', label: '前身/后继' },
-  { type: 'appearance', label: '出现' },
-];
-const relationLabels = Object.fromEntries(relationTypes.map(d => [d.type, d.label]));
+const relationLabels = {
+  membership: '成员',
+  affiliation: '厂牌',
+  location_of: '地点',
+  collaboration: '合作',
+  succession: '前身/后继',
+  appearance: '出现',
+};
+function formatLabel(type, value) {
+  if (type === 'type') return typeLabels[value] || String(value || '');
+  if (type === 'relation') return relationLabels[value] || String(value || '');
+  if (type === 'place') return String(value || '').replace(/\(/g, '（').replace(/\)/g, '）');
+  if (type === 'time') return `${value}年代`;
+  if (type === 'style') return String(value || '');
+  return String(value || '');
+}
+const relationTypes = ['membership', 'affiliation', 'location_of', 'collaboration', 'succession', 'appearance'];
 
 function isNodeVisible(d) {
   const inType = !hiddenTypes.has(d.type);
@@ -511,8 +519,8 @@ function updateViewSummary() {
   const visibleLinks = filteredLinks.filter(isLinkVisible).length;
   const parts = [activeScene ? activeScene.label : '全图'];
   if (activeNode) parts.push(`焦点：${activeNode.label}`);
-  if (activeRelationType) parts.push(`关系：${relationLabels[activeRelationType] || activeRelationType}`);
-  const hidden = [...hiddenTypes].map(type => typeLabels[type] || type);
+  if (activeRelationType) parts.push(`关系：${formatLabel('relation', activeRelationType)}`);
+  const hidden = [...hiddenTypes].map(type => formatLabel('type', type));
   if (hidden.length) parts.push(`隐藏：${hidden.join('、')}`);
   parts.push(`${visibleNodes} 个实体`);
   parts.push(`${visibleLinks} 条关系`);
@@ -540,11 +548,11 @@ const isMobile = () => window.innerWidth < 768;
 // 图例（点击可切换显示/隐藏某一类实体）
 const hiddenTypes = new Set();
 const legendEl = document.getElementById('legend');
-Object.entries(typeLabels).forEach(([type, label]) => {
+Object.keys(typeLabels).forEach(type => {
   const item = document.createElement('div');
   item.className = 'legend-item';
   item.dataset.type = type;
-  item.innerHTML = `<div class="legend-dot" style="background:${COLORS[type]}"></div>${label}`;
+  item.innerHTML = `<div class="legend-dot" style="background:${COLORS[type]}"></div>${formatLabel('type', type)}`;
   item.addEventListener('click', () => {
     if (hiddenTypes.has(type)) hiddenTypes.delete(type); else hiddenTypes.add(type);
     item.classList.toggle('off', hiddenTypes.has(type));
@@ -687,29 +695,6 @@ nodeEl.append('text')
   .attr('fill', d => d.type === 'City' ? '#7ab87a' : '#b0aaa0')
   .attr('letter-spacing', '0.04em');
 
-const microTypeLabels = { Band:'band', Person:'person', Label:'label', City:'city', Project:'project', Venue:'venue', Event:'event' };
-const cityAnchors = {
-  city_la:'LA',
-  city_dc:'DC',
-  city_boston:'Boston',
-  city_chicago:'Chicago',
-  city_olympia:'Olympia',
-  city_seattle:'Seattle',
-  city_minneapolis:'MPLS',
-  city_ny:'NYC',
-  city_sp:'San Pedro',
-  city_sf:'SF',
-  city_austin:'Austin',
-  city_amherst:'Amherst',
-  city_toledo:'Toledo',
-  city_athens:'Athens',
-  city_london:'UK',
-  city_phoenix:'Phoenix',
-  city_vancouver:'Vancouver',
-  city_hoboken:'Hoboken',
-  city_arlington:'Arlington',
-};
-
 function rawEndpointId(endpoint) {
   return endpoint && endpoint.id ? endpoint.id : endpoint;
 }
@@ -717,21 +702,27 @@ function rawEndpointId(endpoint) {
 function firstStyleAnchor(detail = '') {
   const stylePart = detail.split('｜')[1];
   if (!stylePart) return '';
-  return stylePart.split(/[\/／、,，]/)[0].trim().replace(/\s+/g, ' ');
+  const style = stylePart.split(/[\/／、,，]/)[0].trim().replace(/\s+/g, ' ');
+  return formatLabel('style', style);
 }
 
 function decadeAnchor(text = '') {
   const decade = text.match(/\b(19[789]0s|20[012]0s)\b/i);
-  if (decade) return decade[1];
+  if (decade) return formatLabel('time', decade[1].replace(/s$/i, ''));
   const year = text.match(/\b(19[7-9]\d|20[0-2]\d)\b/);
-  return year ? `${Math.floor(Number(year[1]) / 10) * 10}s` : '';
+  return year ? formatLabel('time', Math.floor(Number(year[1]) / 10) * 10) : '';
+}
+
+function placeAnchorFromNodeId(id) {
+  const node = nodeById.get(id);
+  return node ? formatLabel('place', node.label) : '';
 }
 
 function directCityAnchor(id) {
   const link = filteredLinks.find(l => l.type === 'location_of' && (rawEndpointId(l.source) === id || rawEndpointId(l.target) === id));
   if (!link) return '';
   const otherId = rawEndpointId(link.source) === id ? rawEndpointId(link.target) : rawEndpointId(link.source);
-  return cityAnchors[otherId] || '';
+  return placeAnchorFromNodeId(otherId);
 }
 
 function indirectCityAnchor(d) {
@@ -743,9 +734,9 @@ function indirectCityAnchor(d) {
 }
 
 function microContextLabel(d) {
-  const type = microTypeLabels[d.type] || String(d.type || '').toLowerCase();
+  const type = formatLabel('type', d.type);
   const anchor = d.type === 'City'
-    ? (cityAnchors[d.id] || '')
+    ? placeAnchorFromNodeId(d.id)
     : firstStyleAnchor(d.detail) || directCityAnchor(d.id) || indirectCityAnchor(d) || decadeAnchor(`${d.label} ${d.detail || ''}`);
   const label = anchor ? `${type} · ${anchor}` : type;
   return label.length > 18 ? `${label.slice(0, 15)}...` : label;
@@ -762,7 +753,6 @@ const focusPanel = document.getElementById('focus-panel');
 const focusName = document.getElementById('focus-name');
 const focusType = document.getElementById('focus-type');
 const focusChips = document.getElementById('focus-chips');
-const typeZH = { Band:'乐队', Person:'人物', Label:'厂牌', City:'城市', Project:'项目', Venue:'场地', Event:'事件' };
 
 function endpointId(endpoint) {
   return endpoint && endpoint.id ? endpoint.id : endpoint;
@@ -822,22 +812,22 @@ function renderFocusController(d) {
     return;
   }
   focusName.textContent = d.label;
-  focusType.textContent = typeZH[d.type] || d.type;
+  focusType.textContent = formatLabel('type', d.type);
   focusType.style.color = COLORS[d.type] || '#888';
   focusChips.replaceChildren();
 
   relationTypes.forEach(rel => {
-    const hasRelation = focusLinks(d, rel.type).length > 0;
+    const hasRelation = focusLinks(d, rel).length > 0;
     const chip = document.createElement('button');
     chip.type = 'button';
     chip.className = 'rel-chip';
-    chip.textContent = rel.label;
+    chip.textContent = formatLabel('relation', rel);
     chip.disabled = !hasRelation;
-    chip.classList.toggle('active', activeRelationType === rel.type);
-    chip.style.color = activeRelationType === rel.type ? (LINK_COLORS[rel.type] || '#e8e4dc') : '';
+    chip.classList.toggle('active', activeRelationType === rel);
+    chip.style.color = activeRelationType === rel ? (LINK_COLORS[rel] || '#e8e4dc') : '';
     chip.addEventListener('click', e => {
       e.stopPropagation();
-      activeRelationType = activeRelationType === rel.type ? null : rel.type;
+      activeRelationType = activeRelationType === rel ? null : rel;
       applyFocusState(true);
     });
     focusChips.appendChild(chip);
