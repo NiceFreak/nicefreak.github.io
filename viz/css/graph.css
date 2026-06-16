@@ -4,34 +4,6 @@ svg { width: 100%; height: 100%; }
 .node circle { transition: r 0.2s; }
 .node:hover circle { }
 .node text { pointer-events: none; }
-.node .micro-label {
-  fill: #6d675f;
-  font-size: 7.5px;
-  letter-spacing: 0.04em;
-  opacity: 0.42;
-}
-.node.highlighted .micro-label,
-.node.focus-center .micro-label {
-  fill: #8f887d;
-  opacity: 0.62;
-}
-.node .micro-interpretation {
-  pointer-events: none;
-}
-.node .micro-interpretation text {
-  fill: #d4cfc5;
-  font-size: 8px;
-  letter-spacing: 0.02em;
-  opacity: 0.86;
-  paint-order: stroke;
-  stroke: rgba(14,14,14,0.88);
-  stroke-width: 2.5px;
-  stroke-linejoin: round;
-}
-.node .micro-interpretation .line-2 {
-  fill: #a59d92;
-  opacity: 0.76;
-}
 
 .link {
   stroke-opacity: 0.22;
@@ -63,9 +35,6 @@ svg { width: 100%; height: 100%; }
 }
 .node.previous-node .node-name {
   fill: #9b958b;
-}
-.node.second-hop .micro-label {
-  opacity: 0.48;
 }
 .node.focus-center circle.dot {
   stroke-opacity: 1;

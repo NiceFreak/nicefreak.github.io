@@ -62,20 +62,6 @@ function relatedNames(d, type, nodeType) {
   return relatedNodes(d, type, nodeType).map(n => n.label);
 }
 
-function sceneAnchor(d) {
-  const explicit = fieldValue(d, ['章节来源', 'chapterSource', 'chapter_source', 'sourceChapter', 'source']);
-  if (explicit) return explicit;
-  const scene = scenes.find(sc => (sc.nodes || []).includes(d.id));
-  return scene ? cleanPhrase(scene.label) : '';
-}
-
-function chapterAnchor(d) {
-  const explicit = fieldValue(d, ['章节', 'chapterName', 'chapterTitle']);
-  if (explicit) return explicit;
-  if (d.chapter === 0) return '引言';
-  return d.chapter ? `第${d.chapter}章` : '';
-}
-
 function detailSegments(d) {
   const explicit = fieldValue(d, ['一句话简介', '简介', 'summary', 'intro', 'description', '备注', 'notes', 'note']);
   const text = explicit || String(d.detail || '').split('｜')[0];
@@ -172,14 +158,10 @@ function joinNames(items, limit = 2) {
   return uniqueCompact(items).slice(0, limit).join('、');
 }
 
-function compactLine(line, maxLength = 38) {
+function compactFact(line, maxLength = 28) {
   const text = cleanPhrase(line);
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength - 1)}…`;
-}
-
-function compactFact(line) {
-  return cleanPhrase(line);
 }
 
 function isIdentitySignal(segment) {
@@ -192,8 +174,6 @@ function fieldGroundedFacts(d) {
   return {
     type: formatLabel('type', d.type),
     city: cityAnchor(d),
-    scene: sceneAnchor(d),
-    chapter: chapterAnchor(d),
     styles: styleAnchors(d),
     labels: labelAnchors(d),
     bands: roleBandAnchors(d),
@@ -219,60 +199,118 @@ function identitySummary(d) {
   return '';
 }
 
-function identityDetailFacts(d, summary) {
+function firstAnchor(items) {
+  return uniqueCompact(items)[0] || '';
+}
+
+function isSummaryRepeat(fact, summary) {
+  const a = cleanPhrase(fact).toLowerCase();
+  const b = cleanPhrase(summary).toLowerCase();
+  return !!(a && b && (a === b || (a.length > 8 && b.includes(a)) || (b.length > 8 && a.includes(b))));
+}
+
+function relationFallback(d) {
+  const link = relationLinks(d)[0];
+  const other = link ? otherNodeForLink(d, link) : null;
+  return other ? `${other.label} 关系相邻节点` : `${formatLabel('type', d.type)}关系节点`;
+}
+
+function identityAnchorFact(d, f) {
+  const style = firstAnchor(f.styles);
+  const label = firstAnchor(d.type === 'Label' ? f.labels.filter(name => name !== d.label) : f.labels);
+  const band = firstAnchor(f.bands);
+
+  if (d.type === 'Band') {
+    if (label) return `${label} 体系乐队`;
+    if (style) return `${style}乐队`;
+    return '地下音乐乐队';
+  }
+  if (d.type === 'Person') {
+    if (band) return `${band} 关联人物`;
+    if (label) return `${label} 关联人物`;
+    return '场景关系人物';
+  }
+  if (d.type === 'Label') {
+    if (f.city) return `${f.city}独立发行厂牌`;
+    return '独立发行厂牌';
+  }
+  if (d.type === 'City') return '本地音乐场景枢纽';
+  if (d.type === 'Venue') return '现场空间节点';
+  if (d.type === 'Event') return '演出事件节点';
+  if (d.type === 'Project') return '场景组织节点';
+  return `${formatLabel('type', d.type)}关系节点`;
+}
+
+function structuralRoleFact(d, f) {
+  const predecessor = firstAnchor(f.predecessors);
+  const successor = firstAnchor(f.successors);
+  const label = firstAnchor(d.type === 'Label' ? f.labels.filter(name => name !== d.label) : f.labels);
+  const roster = firstAnchor(f.roster);
+  const band = firstAnchor(f.bands);
+  const localEntity = firstAnchor(f.localEntities);
+  const collaborator = firstAnchor(f.collaborators);
+
+  if (successor) return `${successor} 的直接前身`;
+  if (predecessor) return `承接 ${predecessor} 的后继节点`;
+  if (d.type === 'Band' && label) return `${label} 核心阵列成员`;
+  if (d.type === 'Label' && roster) return `${roster} 所在厂牌体系`;
+  if (d.type === 'Person' && band) return `${band} 成员关系节点`;
+  if (d.type === 'City' && localEntity) return `${localEntity} 所在本地网络`;
+  if ((d.type === 'Venue' || d.type === 'Event') && band) return `${band} 现场关系节点`;
+  if (collaborator) return `${collaborator} 合作关系节点`;
+  return relationFallback(d);
+}
+
+function triggerSegmentFact(d, summary) {
   const summaryKey = cleanPhrase(summary).toLowerCase();
+  const triggerPattern = /DIY|巡演|票价|拒绝|定义|引荐|起点|发源地|证明|边界|自毁|音量|视觉|声音|发行|地下|场景|体系|组织|推动|促成|影响|核心|World Domination|International Pop Underground/i;
   return detailSegments(d)
     .filter(isIdentitySignal)
     .filter(segment => cleanPhrase(segment).toLowerCase() !== summaryKey)
     .filter(segment => !/^(创始人|联合创始人|旗下|成员|位于|大本营)[：:]/.test(segment))
-    .slice(0, 2);
+    .filter(segment => !/\b(19[7-9]\d|20[0-2]\d)年?\b|[12]\d{3}\s*[–-]\s*[12]?\d{0,3}/.test(segment))
+    .find(segment => triggerPattern.test(segment)) || '';
+}
+
+function explorationTriggerFact(d, f, summary) {
+  const segment = triggerSegmentFact(d, summary);
+  if (segment) return segment;
+
+  const successor = firstAnchor(f.successors);
+  const predecessor = firstAnchor(f.predecessors);
+  const label = firstAnchor(d.type === 'Label' ? f.labels.filter(name => name !== d.label) : f.labels);
+  const band = firstAnchor(f.bands);
+
+  if (successor) return `追踪 ${successor} 延伸路径`;
+  if (predecessor) return `追踪 ${predecessor} 来源路径`;
+  if (d.type === 'Label' || firstAnchor(f.roster)) return '查看厂牌发行网络';
+  if (label) return `查看 ${label} 发行网络`;
+  if (firstAnchor(f.localEntities)) return '打开本地场景网络';
+  if (firstAnchor(f.collaborators)) return '沿合作关系继续探索';
+  if (band) return `沿 ${band} 关系继续探索`;
+  return '继续查看相邻节点';
 }
 
 function identityFacts(d) {
   const f = fieldGroundedFacts(d);
+  const summary = identitySummary(d);
   const facts = [];
   const add = value => {
     const fact = compactFact(value);
-    if (fact && !facts.includes(fact)) facts.push(fact);
-  };
-  const addJoined = (label, items, limit = 2) => {
-    const joined = joinNames(items, limit);
-    if (joined) add(`${label}: ${joined}`);
+    if (fact && !facts.includes(fact) && !isSummaryRepeat(fact, summary)) facts.push(fact);
   };
 
-  identityDetailFacts(d, identitySummary(d)).forEach(add);
-
-  if (d.type === 'Band') {
-    addJoined('风格', f.styles);
-    if (f.city) add(`城市: ${f.city}`);
-    addJoined('厂牌', f.labels, 1);
-    if (f.chapter) add(f.chapter);
-  } else if (d.type === 'Person') {
-    addJoined('乐队', f.bands);
-    if (f.city) add(`场景: ${f.city}`);
-    if (f.chapter) add(f.chapter);
-  } else if (d.type === 'Label') {
-    addJoined('旗下', f.roster);
-    if (f.city) add(`城市: ${f.city}`);
-    if (f.chapter) add(f.chapter);
-  } else if (d.type === 'City') {
-    addJoined('关联', f.localEntities);
-    if (f.scene) add(f.scene);
-    if (f.chapter) add(f.chapter);
-  } else if (d.type === 'Venue' || d.type === 'Event') {
-    if (f.city) add(`城市: ${f.city}`);
-    addJoined('相关', f.bands);
-    if (f.chapter) add(f.chapter);
-  } else {
-    addJoined('相关', f.bands);
-    if (f.city) add(`场景: ${f.city}`);
-    if (f.chapter) add(f.chapter);
-  }
-
-  if (facts.length < 3) addJoined('风格', f.styles);
-  if (facts.length < 3 && f.city) add(`城市: ${f.city}`);
-  if (facts.length < 3 && f.chapter) add(f.chapter);
-  return facts.slice(0, 2);
+  add(identityAnchorFact(d, f));
+  add(structuralRoleFact(d, f));
+  add(explorationTriggerFact(d, f, summary));
+  [
+    relationFallback(d),
+    '沿关系网络继续探索',
+    `${formatLabel('type', d.type)}网络节点`,
+  ].forEach(candidate => {
+    if (facts.length < 3) add(candidate);
+  });
+  return facts.slice(0, 3);
 }
 
 // Focus controller & neighborhood state

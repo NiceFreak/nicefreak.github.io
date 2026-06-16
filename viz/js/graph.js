@@ -154,9 +154,7 @@ let highlightOn = false;
 function applyLabelVisibility(scale) {
   if (scale == null) scale = d3.zoomTransform(svg.node()).k;
   const showMinor = scale >= 0.55;
-  const showMicro = scale >= 0.9;
   nodeEl.selectAll('text.node-name').style('display', n => (showMinor || ANCHOR_LABEL.has(n.type)) ? null : 'none');
-  nodeEl.selectAll('text.micro-label').style('display', n => showMicro ? null : 'none');
 }
 
 nodeEl.append('text')
@@ -170,20 +168,6 @@ nodeEl.append('text')
 
 function rawEndpointId(endpoint) {
   return endpoint && endpoint.id ? endpoint.id : endpoint;
-}
-
-function firstStyleAnchor(detail = '') {
-  const stylePart = detail.split('｜')[1];
-  if (!stylePart) return '';
-  const style = stylePart.split(/[\/／、,，]/)[0].trim().replace(/\s+/g, ' ');
-  return formatLabel('style', style);
-}
-
-function decadeAnchor(text = '') {
-  const decade = text.match(/\b(19[789]0s|20[012]0s)\b/i);
-  if (decade) return formatLabel('time', decade[1].replace(/s$/i, ''));
-  const year = text.match(/\b(19[7-9]\d|20[0-2]\d)\b/);
-  return year ? formatLabel('time', Math.floor(Number(year[1]) / 10) * 10) : '';
 }
 
 function placeAnchorFromNodeId(id) {
@@ -205,101 +189,6 @@ function indirectCityAnchor(d) {
   const otherId = rawEndpointId(membership.source) === d.id ? rawEndpointId(membership.target) : rawEndpointId(membership.source);
   return directCityAnchor(otherId);
 }
-
-function microContextLabel(d) {
-  const type = formatLabel('type', d.type);
-  const anchor = d.type === 'City'
-    ? placeAnchorFromNodeId(d.id)
-    : firstStyleAnchor(d.detail) || directCityAnchor(d.id) || indirectCityAnchor(d) || decadeAnchor(`${d.label} ${d.detail || ''}`);
-  const label = anchor ? `${type} · ${anchor}` : type;
-  return label.length > 18 ? `${label.slice(0, 15)}...` : label;
-}
-
-function fieldGroundedInterpretation(d) {
-  const f = fieldGroundedFacts(d);
-  const lines = [];
-  const place = f.city || f.scene;
-  const style = joinNames(f.styles);
-  const label = joinNames(f.labels);
-  const bands = joinNames(f.bands);
-  const localEntities = joinNames(f.localEntities);
-  const roster = joinNames(f.roster);
-  const collaborators = joinNames(f.collaborators);
-
-  if (d.type === 'Band') {
-    if (place && style && label) lines.push(`${place}的${style}乐队，进入${label}的独立发行脉络`);
-    else if (place && style) lines.push(`${place}的${style}乐队，体现当地地下音乐的一条方向`);
-    else if (style && f.summary) lines.push(`${style}语汇下的代表之一，${f.summary}`);
-
-    if (f.predecessors.length && f.successors.length) lines.push(`承接${joinNames(f.predecessors)}，并延伸到${joinNames(f.successors)}`);
-    else if (f.predecessors.length) lines.push(`由${joinNames(f.predecessors)}延伸而来，带出后续风格转向`);
-    else if (f.successors.length) lines.push(`其成员和方向延续到${joinNames(f.successors)}`);
-    else if (f.summary) lines.push(f.summary);
-    else if (collaborators) lines.push(`与${collaborators}的往来，标出它在同期场景中的位置`);
-  } else if (d.type === 'Label') {
-    if (place && roster) lines.push(`${place}厂牌，以${roster}等乐队塑造独立发行体系`);
-    else if (roster) lines.push(`以${roster}等乐队为核心，扩展独立发行实践`);
-    else if (f.summary) lines.push(f.summary);
-
-    if (f.scene) lines.push(`${f.scene}中的组织力量，影响乐队录音与流通方式`);
-    else if (collaborators) lines.push(`与${collaborators}的合作，体现地下场景的信息流通`);
-  } else if (d.type === 'Person') {
-    if (bands && label) lines.push(`同时参与${bands}与${label}相关事务，兼具创作和组织角色`);
-    else if (bands && place) lines.push(`作为${bands}相关人物，参与${place}场景的形成`);
-    else if (bands) lines.push(`通过${bands}留下成员、创作或组织层面的痕迹`);
-    else if (label && f.summary) lines.push(`与${label}相关，${f.summary}`);
-    else if (label) lines.push(`参与${label}相关事务，体现厂牌组织角色`);
-
-    if (f.summary && !lines.includes(f.summary)) lines.push(f.summary);
-    else if (collaborators) lines.push(`与${collaborators}的合作，补足其在场景中的角色`);
-  } else if (d.type === 'City') {
-    if (f.scene && localEntities) lines.push(`${f.scene}的城市背景，承载${localEntities}等音乐活动`);
-    else if (localEntities) lines.push(`${d.label}承载${localEntities}等乐队/场地，是场景地理背景`);
-    else lines.push(`${d.label}是相关乐队、厂牌与演出空间的地理背景`);
-
-    if (style) lines.push(`${style}等声音在这里形成可辨识的地方气质`);
-  } else if (d.type === 'Venue' || d.type === 'Event') {
-    if (place && bands) lines.push(`${place}的现场记忆，留下${bands}等乐队活动痕迹`);
-    else if (place && f.summary) lines.push(`${place}场景中的现场片段，${f.summary}`);
-    else if (f.summary) lines.push(f.summary);
-
-    if (collaborators) lines.push(`与${collaborators}相关，提示当时演出和社区关系`);
-  } else {
-    if (place && f.summary) lines.push(`${place}场景中的组织行动，${f.summary}`);
-    else if (bands) lines.push(`围绕${bands}等乐队展开，呈现地下场景的社区面`);
-    else if (f.summary) lines.push(f.summary);
-  }
-
-  if (!lines.length) {
-    if (place && label) lines.push(`${place}与${label}之间的音乐关系，使它具有场景意义`);
-    else if (style && f.chapter) lines.push(`${style}脉络中的${f.type}，出现在${f.chapter}相关叙述中`);
-    else lines.push(`${f.type}，可从相关乐队、厂牌与场景继续理解`);
-  }
-
-  return uniqueCompact(lines).slice(0, 2).map(line => compactLine(line));
-}
-
-nodeEl.append('text')
-  .attr('class', 'micro-label')
-  .text(microContextLabel)
-  .attr('dy', d => nodeRadius(d) + 32)
-  .attr('text-anchor', 'middle');
-
-const interpretationEl = nodeEl.append('g')
-  .attr('class', 'micro-interpretation')
-  .style('display', 'none');
-
-interpretationEl.append('text')
-  .attr('class', 'line-1')
-  .attr('dy', d => nodeRadius(d) + 46)
-  .attr('text-anchor', 'middle')
-  .text(d => fieldGroundedInterpretation(d)[0]);
-
-interpretationEl.append('text')
-  .attr('class', 'line-2')
-  .attr('dy', d => nodeRadius(d) + 57)
-  .attr('text-anchor', 'middle')
-  .text(d => fieldGroundedInterpretation(d)[1]);
 
 function endpointId(endpoint) {
   return endpoint && endpoint.id ? endpoint.id : endpoint;
@@ -385,10 +274,6 @@ function applyFocusState(reframe = false) {
   highlightOn = true;
   nodeEl.selectAll('text.node-name').style('display', n =>
     (connected.has(n.id) || ANCHOR_LABEL.has(n.type)) ? null : 'none');
-  nodeEl.selectAll('text.micro-label').style('display', n =>
-    (connected.has(n.id) || secondHopIds.has(n.id)) ? null : 'none');
-  nodeEl.selectAll('g.micro-interpretation').style('display', n =>
-    n.id === activeNode.id ? null : 'none');
 
   renderFocusController(activeNode);
   updateViewSummary();
@@ -407,7 +292,6 @@ function clearFocusVisuals() {
   // 还原为按当前缩放比例决定的标签可见性
   highlightOn = false;
   applyLabelVisibility();
-  nodeEl.selectAll('g.micro-interpretation').style('display', 'none');
   renderFocusController(null);
 }
 
@@ -593,9 +477,6 @@ window.addEventListener('resize', () => {
   nodeEl.select('circle.dot').attr('r', nodeRadius);
   nodeEl.select('circle.hit').attr('r', d => nodeRadius(d) + (isMobile() ? 16 : 8));
   nodeEl.select('text.node-name').attr('dy', d => nodeRadius(d) + 11);
-  nodeEl.select('text.micro-label').attr('dy', d => nodeRadius(d) + 32);
-  nodeEl.select('g.micro-interpretation text.line-1').attr('dy', d => nodeRadius(d) + 46);
-  nodeEl.select('g.micro-interpretation text.line-2').attr('dy', d => nodeRadius(d) + 57);
   if (!highlightOn) applyLabelVisibility();
   updateViewSummary();
   sim.alpha(0.2).restart();
