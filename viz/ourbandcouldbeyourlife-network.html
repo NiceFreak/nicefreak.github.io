@@ -148,6 +148,11 @@
     color: #666;
     letter-spacing: 0.08em;
     line-height: 1.8;
+    max-width: min(520px, calc(100vw - 120px));
+  }
+
+  #info .info-source {
+    color: #444;
   }
 
   svg { width: 100%; height: 100%; }
@@ -283,7 +288,7 @@
     #controls { bottom: auto; top: 12px; right: 12px; gap: 8px; }
     .ctrl-btn { width: 40px; height: 40px; font-size: 20px; }
 
-    #info { bottom: 12px; left: 12px; font-size: 9px; z-index: 5; }
+    #info { bottom: 12px; left: 12px; font-size: 9px; z-index: 5; max-width: calc(100vw - 24px); }
 
     /* 移动端：详情提示改为贴底抽屉，避免漂浮在手指下、被边缘裁切 */
     #tooltip {
@@ -330,7 +335,7 @@
 </div>
 
 <div id="info">
-  <span id="node-count">—</span> &nbsp;·&nbsp; <span id="link-count">—</span>
+  <span id="view-summary">—</span> &nbsp;·&nbsp; <span class="info-source">数据源 v2</span>
 </div>
 
 <svg id="svg">
@@ -396,6 +401,39 @@ const links = [{"source": "L001","target": "city_la","type": "location_of","labe
 const scenes = [{"id": "SC001","label": "D.C. 硬核场景 1979–1983","type": "本地","nodes": ["B006","B008","B009","B020","B021","B022","E004","L002","P003","P009","P010","P011","P012","P013","city_dc"]},{"id": "SC002","label": "D.C. 后硬核场景 1984–2003","type": "本地","nodes": ["B007","B023","B024","E007","E010","L002","P009","P014","P015","P016","city_dc"]},{"id": "SC003","label": "SST 生态圈 1978–1989","type": "跨地域","nodes": ["B001","B002","B004","B010","B012","L001","P001","P002","P003","P004","P005","P006","P007","P008","P017","P018","P019","P024","P025","P026","P027","city_la","city_minneapolis","city_ny","city_sp"]},{"id": "SC004","label": "奥林匹亚 K 场景 1982–1992","type": "本地/跨地域","nodes": ["B017","L005","P037","P038","P039","city_olympia"]},{"id": "SC005","label": "西雅图格朗基场景 1986–1992","type": "本地","nodes": ["B018","B019","B025","L006","P040","P041","P042","P043","P048","P049","P054","city_seattle"]},{"id": "SC006","label": "波士顿后朋克场景 1979–1983","type": "本地","nodes": ["B005","E008","city_boston"]},{"id": "SC007","label": "芝加哥工业/噪音场景 1981–1987","type": "本地","nodes": ["B014","B026","E005","L004","P031","P032","P033","P046","P053","city_chicago","city_toledo"]},{"id": "SC008","label": "明尼阿波利斯另类摇滚场景 1979–1991","type": "本地","nodes": ["B010","B011","E006","L007","P017","P018","P019","P020","P021","P022","P023","city_minneapolis"]},{"id": "SC009","label": "K 国际流行地下网络 1982–","type": "跨地域","nodes": ["B017","L005","P037","P038","P039","city_olympia"]},{"id": "SC010","label": "纽约艺术/噪音场景 1981–1990","type": "本地","nodes": ["B012","B028","P024","P025","P026","P027","city_ny"]},{"id": "SC011","label": "旧金山湾区朋克/硬核场景 1978–85","type": "本地","nodes": ["B036","L012","P045","city_sf"]},{"id": "SC012","label": "D.C. Revolution Summer 1985","type": "本地","nodes": ["B007","B023","B024","E007","E010","L002","P009","P014","P015","P016","city_dc"]}];
 
 let activeScene = null;
+let activeNode = null;
+const viewSummaryEl = document.getElementById('view-summary');
+const typeLabels = { Band:'乐队', Person:'人物', Label:'厂牌', City:'城市', Project:'组织/项目', Venue:'场地', Event:'事件' };
+
+function isNodeVisible(d) {
+  const inType = !hiddenTypes.has(d.type);
+  const inScene = !activeScene || (activeScene.nodes || []).includes(d.id);
+  return inType && inScene;
+}
+
+function isLinkVisible(l) {
+  const source = l.source.id ? l.source : nodeById.get(l.source);
+  const target = l.target.id ? l.target : nodeById.get(l.target);
+  if (!source || !target) return false;
+  if (hiddenTypes.has(source.type) || hiddenTypes.has(target.type)) return false;
+  if (activeScene) {
+    const ids = new Set(activeScene.nodes || []);
+    if (!ids.has(source.id) || !ids.has(target.id)) return false;
+  }
+  return true;
+}
+
+function updateViewSummary() {
+  const visibleNodes = filteredNodes.filter(isNodeVisible).length;
+  const visibleLinks = filteredLinks.filter(isLinkVisible).length;
+  const parts = [activeScene ? activeScene.label : '全图'];
+  if (activeNode) parts.push(`选中：${activeNode.label}`);
+  const hidden = [...hiddenTypes].map(type => typeLabels[type] || type);
+  if (hidden.length) parts.push(`隐藏：${hidden.join('、')}`);
+  parts.push(`${visibleNodes} 个实体`);
+  parts.push(`${visibleLinks} 条关系`);
+  viewSummaryEl.textContent = parts.join(' · ');
+}
 
 // ── 渲染 ──
 const svg = d3.select('#svg');
@@ -416,7 +454,6 @@ svg.call(zoom);
 const isMobile = () => window.innerWidth < 768;
 
 // 图例（点击可切换显示/隐藏某一类实体）
-const typeLabels = { Band:'乐队', Person:'人物', Label:'厂牌', City:'城市', Project:'组织/项目', Venue:'场地', Event:'事件' };
 const hiddenTypes = new Set();
 const legendEl = document.getElementById('legend');
 Object.entries(typeLabels).forEach(([type, label]) => {
@@ -428,6 +465,8 @@ Object.entries(typeLabels).forEach(([type, label]) => {
     if (hiddenTypes.has(type)) hiddenTypes.delete(type); else hiddenTypes.add(type);
     item.classList.toggle('off', hiddenTypes.has(type));
     applyTypeFilter();
+    if (activeNode && hiddenTypes.has(activeNode.type)) clearSelection();
+    else updateViewSummary();
   });
   legendEl.appendChild(item);
 });
@@ -443,8 +482,12 @@ function applyTypeFilter() {
 const filteredIds = new Set(filteredNodes.map(n => n.id));
 // 清洗关系：丢弃数组空洞、指向不存在节点的关系，并按 来源>目标:类型 合并标签
 const linkByKey = new Map();
+const droppedLinks = [];
 links.forEach(l => {
-  if (!l || !filteredIds.has(l.source) || !filteredIds.has(l.target)) return;
+  if (!l || !filteredIds.has(l.source) || !filteredIds.has(l.target)) {
+    if (l) droppedLinks.push(l);
+    return;
+  }
   const key = l.source + '>' + l.target + ':' + l.type;
   const existing = linkByKey.get(key);
   if (!existing) {
@@ -454,6 +497,15 @@ links.forEach(l => {
   if (l.label && !existing.label.includes(l.label)) existing.label += '；' + l.label;
 });
 const filteredLinks = Array.from(linkByKey.values());
+if (droppedLinks.length) {
+  console.warn('[network data] dropped links with missing endpoints:', droppedLinks);
+}
+const sceneNodeWarnings = scenes
+  .map(sc => ({ scene: sc.id, missing: (sc.nodes || []).filter(id => !filteredIds.has(id)) }))
+  .filter(sc => sc.missing.length);
+if (sceneNodeWarnings.length) {
+  console.warn('[network data] scenes reference missing nodes:', sceneNodeWarnings);
+}
 
 const sim = d3.forceSimulation(filteredNodes)
   .force('link', d3.forceLink(filteredLinks).id(d => d.id).distance(d => {
@@ -555,7 +607,7 @@ const ttDetail = document.getElementById('tt-detail');
 
 const typeZH = { Band:'乐队', Person:'人物', Label:'厂牌', City:'城市', Project:'项目', Venue:'场地', Event:'事件' };
 
-// 高亮某个节点及其直接关系（鼠标悬停与触屏点击共用）
+// 高亮某个节点及其直接关系（hover 可临时预览，click 会持久选中）
 function highlightNode(d) {
   const connected = new Set([d.id]);
   filteredLinks.forEach(l => {
@@ -580,13 +632,25 @@ function highlightNode(d) {
   tooltip.classList.add('show');
 }
 
-function clearHighlight() {
+function clearHighlightVisuals() {
   nodeEl.classed('dimmed', false).classed('highlighted', false);
   linkEl.classed('dimmed', false).classed('highlighted', false);
   // 还原为按当前缩放比例决定的标签可见性
   highlightOn = false;
   applyLabelVisibility();
   tooltip.classList.remove('show');
+}
+
+function selectNode(d) {
+  activeNode = d;
+  highlightNode(d);
+  updateViewSummary();
+}
+
+function clearSelection() {
+  activeNode = null;
+  clearHighlightVisuals();
+  updateViewSummary();
 }
 
 // 把提示框定位到指定屏幕坐标（桌面端跟随光标；移动端固定为底部抽屉，见 CSS）
@@ -604,19 +668,22 @@ function positionTooltip(clientX, clientY) {
 }
 
 nodeEl
-  .on('mouseover', (e, d) => { if (!isMobile()) highlightNode(d); })
+  .on('mouseover', (e, d) => { if (!isMobile() && !activeNode) highlightNode(d); })
   .on('mousemove', e => { if (!isMobile()) positionTooltip(e.clientX, e.clientY); })
-  .on('mouseout', () => { if (!isMobile()) clearHighlight(); })
+  .on('mouseout', () => { if (!isMobile() && !activeNode) clearHighlightVisuals(); })
   // 触屏 / 点击：高亮并显示详情；阻止冒泡，以免触发背景的清除
   .on('click', function(e, d) {
     e.stopPropagation();
-    highlightNode(d);
+    selectNode(d);
     const p = (e.touches && e.touches[0]) || e;
     positionTooltip(p.clientX ?? window.innerWidth / 2, p.clientY ?? window.innerHeight / 2);
   });
 
 // 点击空白处清除高亮（移动端无 mouseout 时尤其重要）
-svg.on('click', clearHighlight);
+svg.on('click', clearSelection);
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape') clearSelection();
+});
 
 // tick
 sim.on('tick', () => {
@@ -626,9 +693,8 @@ sim.on('tick', () => {
   nodeEl.attr('transform', d => `translate(${d.x},${d.y})`);
 });
 
-// 统计
-document.getElementById('node-count').textContent = isMobile() ? '拖动浏览全图' : '悬停查看关系';
-document.getElementById('link-count').textContent = isMobile() ? '点节点看关系' : '点击查看详情';
+// 当前视图摘要
+updateViewSummary();
 
 // 自适应缩放：根据所有节点的包围盒，把整张网络缩放/平移到视口内（留出边距）
 // 取代固定缩放——节点变多后能保证移动端首屏就能看到全貌
@@ -720,8 +786,9 @@ document.addEventListener('click', e => {
 if (isMobile()) scenePanel.classList.add('collapsed');
 
 function activateScene(sc, btn) {
-  if (activeScene === sc.id) { clearScene(); return; }
-  activeScene = sc.id;
+  if (activeScene && activeScene.id === sc.id) { clearScene(); return; }
+  activeScene = sc;
+  if (activeNode && !(sc.nodes || []).includes(activeNode.id)) activeNode = null;
   document.querySelectorAll('.scene-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const inScene = new Set(sc.nodes);
@@ -729,6 +796,9 @@ function activateScene(sc, btn) {
   nodeEl.classed('scene-dim', d => !inScene.has(d.id));
   linkEl.style('opacity', l =>
     inScene.has(l.source.id) && inScene.has(l.target.id) ? 0.8 : 0.04);
+  if (activeNode) highlightNode(activeNode);
+  else clearHighlightVisuals();
+  updateViewSummary();
   // 移动端选定后自动收起面板，露出图形
   if (isMobile()) scenePanel.classList.add('collapsed');
 }
@@ -738,6 +808,9 @@ function clearScene() {
   document.querySelectorAll('.scene-btn').forEach(b => b.classList.remove('active'));
   nodeEl.classed('scene-lit', false).classed('scene-dim', false);
   linkEl.style('opacity', null);
+  if (activeNode) highlightNode(activeNode);
+  else clearHighlightVisuals();
+  updateViewSummary();
 }
 
 // 旋屏 / 窗口尺寸变化：更新力的中心、按当前断点重算半径与热区，并重新适配视图
@@ -755,8 +828,7 @@ window.addEventListener('resize', () => {
   nodeEl.select('circle.hit').attr('r', d => nodeRadius(d) + (isMobile() ? 16 : 8));
   nodeEl.select('text').attr('dy', d => nodeRadius(d) + 11);
   if (!highlightOn) applyLabelVisibility();
-  document.getElementById('node-count').textContent = isMobile() ? '拖动浏览全图' : '悬停查看关系';
-  document.getElementById('link-count').textContent = isMobile() ? '点节点看关系' : '点击查看详情';
+  updateViewSummary();
   sim.alpha(0.2).restart();
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => entryView(400), 350);
