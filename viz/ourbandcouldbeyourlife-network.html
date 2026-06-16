@@ -214,6 +214,10 @@
   }
 
   .link.highlighted { stroke-opacity: 0.95; }
+  .link.step-trace {
+    stroke-opacity: 0.72;
+    stroke-dasharray: 5,3;
+  }
   .link.path-hint {
     stroke-opacity: 0.16;
     stroke-dasharray: 2,5;
@@ -222,9 +226,18 @@
   .node.dimmed { opacity: 0.12; }
   .node.second-hop { opacity: 0.34; }
   .node.highlighted { opacity: 1; }
+  .node.previous-node { opacity: 0.58; }
   .node.second-hop circle.dot {
     stroke-opacity: 0.42;
     stroke-width: 1.3;
+  }
+  .node.previous-node circle.dot {
+    stroke-opacity: 0.68;
+    stroke-width: 1.6;
+    stroke-dasharray: 2,3;
+  }
+  .node.previous-node .node-name {
+    fill: #9b958b;
   }
   .node.second-hop .micro-label {
     opacity: 0.48;
@@ -461,6 +474,7 @@ const scenes = [{"id": "SC001","label": "D.C. 硬核场景 1979–1983","type": 
 
 let activeScene = null;
 let activeNode = null;
+let previousNode = null;
 let activeRelationType = null;
 const viewSummaryEl = document.getElementById('view-summary');
 const typeLabels = { Band:'乐队', Person:'人物', Label:'厂牌', City:'城市', Project:'组织/项目', Venue:'场地', Event:'事件' };
@@ -793,6 +807,14 @@ function secondHopState(firstHopIds) {
   return { secondHopIds, pathHintLinks };
 }
 
+function isStepTraceLink(l) {
+  if (!activeNode || !previousNode || activeNode.id === previousNode.id) return false;
+  if (!isLinkVisible(l)) return false;
+  const sid = endpointId(l.source);
+  const tid = endpointId(l.target);
+  return (sid === activeNode.id && tid === previousNode.id) || (sid === previousNode.id && tid === activeNode.id);
+}
+
 function renderFocusController(d) {
   if (!d) {
     focusPanel.classList.remove('show');
@@ -837,14 +859,16 @@ function applyFocusState(reframe = false) {
   const focusLinkSet = new Set(linksForFocus);
   const { secondHopIds, pathHintLinks } = secondHopState(connected);
 
-  nodeEl.classed('dimmed', n => !connected.has(n.id) && !secondHopIds.has(n.id));
+  nodeEl.classed('dimmed', n => !connected.has(n.id) && !secondHopIds.has(n.id) && (!previousNode || n.id !== previousNode.id));
   nodeEl.classed('highlighted', n => connected.has(n.id));
   nodeEl.classed('second-hop', n => secondHopIds.has(n.id));
+  nodeEl.classed('previous-node', n => previousNode && n.id === previousNode.id && n.id !== activeNode.id);
   nodeEl.classed('focus-center', n => n.id === activeNode.id);
   nodeEl.classed('neighbor', n => n.id !== activeNode.id && connected.has(n.id));
-  linkEl.classed('dimmed', l => !focusLinkSet.has(l) && !pathHintLinks.has(l));
+  linkEl.classed('dimmed', l => !focusLinkSet.has(l) && !pathHintLinks.has(l) && !isStepTraceLink(l));
   linkEl.classed('highlighted', l => focusLinkSet.has(l));
   linkEl.classed('path-hint', l => pathHintLinks.has(l));
+  linkEl.classed('step-trace', isStepTraceLink);
 
   // 焦点模式下只保留焦点邻域与锚点标签，迫使理解回到 graph。
   highlightOn = true;
@@ -863,9 +887,10 @@ function clearFocusVisuals() {
     .classed('dimmed', false)
     .classed('highlighted', false)
     .classed('second-hop', false)
+    .classed('previous-node', false)
     .classed('focus-center', false)
     .classed('neighbor', false);
-  linkEl.classed('dimmed', false).classed('highlighted', false).classed('path-hint', false);
+  linkEl.classed('dimmed', false).classed('highlighted', false).classed('path-hint', false).classed('step-trace', false);
   // 还原为按当前缩放比例决定的标签可见性
   highlightOn = false;
   applyLabelVisibility();
@@ -873,6 +898,7 @@ function clearFocusVisuals() {
 }
 
 function selectNode(d) {
+  previousNode = activeNode && activeNode.id !== d.id ? activeNode : null;
   activeNode = d;
   activeRelationType = null;
   applyFocusState(true);
@@ -880,6 +906,7 @@ function selectNode(d) {
 
 function clearSelection() {
   activeNode = null;
+  previousNode = null;
   activeRelationType = null;
   clearFocusVisuals();
   updateViewSummary();
@@ -1032,8 +1059,10 @@ function activateScene(sc, btn) {
   activeScene = sc;
   if (activeNode && !(sc.nodes || []).includes(activeNode.id)) {
     activeNode = null;
+    previousNode = null;
     activeRelationType = null;
   }
+  if (previousNode && !(sc.nodes || []).includes(previousNode.id)) previousNode = null;
   document.querySelectorAll('.scene-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const inScene = new Set(sc.nodes);
