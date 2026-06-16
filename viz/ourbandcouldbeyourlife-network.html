@@ -214,9 +214,21 @@
   }
 
   .link.highlighted { stroke-opacity: 0.95; }
+  .link.path-hint {
+    stroke-opacity: 0.16;
+    stroke-dasharray: 2,5;
+  }
   .link.dimmed { stroke-opacity: 0.04; }
   .node.dimmed { opacity: 0.12; }
+  .node.second-hop { opacity: 0.34; }
   .node.highlighted { opacity: 1; }
+  .node.second-hop circle.dot {
+    stroke-opacity: 0.42;
+    stroke-width: 1.3;
+  }
+  .node.second-hop .micro-label {
+    opacity: 0.48;
+  }
   .node.focus-center circle.dot {
     stroke-opacity: 1;
     stroke-width: 2.6;
@@ -763,6 +775,24 @@ function focusNodesFromLinks(d, linksForFocus) {
   return connected;
 }
 
+function secondHopState(firstHopIds) {
+  const secondHopIds = new Set();
+  const pathHintLinks = new Set();
+  filteredLinks.forEach(l => {
+    if (!isLinkVisible(l)) return;
+    const sid = endpointId(l.source);
+    const tid = endpointId(l.target);
+    const sourceIsFirst = firstHopIds.has(sid);
+    const targetIsFirst = firstHopIds.has(tid);
+    if (sourceIsFirst === targetIsFirst) return;
+    const nextId = sourceIsFirst ? tid : sid;
+    if (firstHopIds.has(nextId)) return;
+    secondHopIds.add(nextId);
+    pathHintLinks.add(l);
+  });
+  return { secondHopIds, pathHintLinks };
+}
+
 function renderFocusController(d) {
   if (!d) {
     focusPanel.classList.remove('show');
@@ -805,20 +835,23 @@ function applyFocusState(reframe = false) {
   const linksForFocus = focusLinks(activeNode);
   const connected = focusNodesFromLinks(activeNode, linksForFocus);
   const focusLinkSet = new Set(linksForFocus);
+  const { secondHopIds, pathHintLinks } = secondHopState(connected);
 
-  nodeEl.classed('dimmed', n => !connected.has(n.id));
+  nodeEl.classed('dimmed', n => !connected.has(n.id) && !secondHopIds.has(n.id));
   nodeEl.classed('highlighted', n => connected.has(n.id));
+  nodeEl.classed('second-hop', n => secondHopIds.has(n.id));
   nodeEl.classed('focus-center', n => n.id === activeNode.id);
   nodeEl.classed('neighbor', n => n.id !== activeNode.id && connected.has(n.id));
-  linkEl.classed('dimmed', l => !focusLinkSet.has(l));
+  linkEl.classed('dimmed', l => !focusLinkSet.has(l) && !pathHintLinks.has(l));
   linkEl.classed('highlighted', l => focusLinkSet.has(l));
+  linkEl.classed('path-hint', l => pathHintLinks.has(l));
 
   // 焦点模式下只保留焦点邻域与锚点标签，迫使理解回到 graph。
   highlightOn = true;
   nodeEl.selectAll('text.node-name').style('display', n =>
     (connected.has(n.id) || ANCHOR_LABEL.has(n.type)) ? null : 'none');
   nodeEl.selectAll('text.micro-label').style('display', n =>
-    connected.has(n.id) ? null : 'none');
+    (connected.has(n.id) || secondHopIds.has(n.id)) ? null : 'none');
 
   renderFocusController(activeNode);
   updateViewSummary();
@@ -829,9 +862,10 @@ function clearFocusVisuals() {
   nodeEl
     .classed('dimmed', false)
     .classed('highlighted', false)
+    .classed('second-hop', false)
     .classed('focus-center', false)
     .classed('neighbor', false);
-  linkEl.classed('dimmed', false).classed('highlighted', false);
+  linkEl.classed('dimmed', false).classed('highlighted', false).classed('path-hint', false);
   // 还原为按当前缩放比例决定的标签可见性
   highlightOn = false;
   applyLabelVisibility();
