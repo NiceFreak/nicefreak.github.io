@@ -392,7 +392,7 @@ function applyFocusState(reframe = false) {
 
   renderFocusController(activeNode);
   updateViewSummary();
-  if (reframe) focusNeighborhoodView(activeNode, connected, 520);
+  if (reframe) focusNeighborhoodView(activeNode, connected, 320);
 }
 
 function clearFocusVisuals() {
@@ -475,11 +475,15 @@ function fitView(duration = 0) {
 function frameNodeSetView(centerNode, nodeIds, duration = 0, options = {}) {
   const nodesForFrame = filteredNodes.filter(n => nodeIds.has(n.id) && isNodeVisible(n));
   if (!nodesForFrame.length || centerNode.x == null || centerNode.y == null) return;
-  let maxDx = 0, maxDy = 0;
+  let minDx = 0, maxDx = 0, minDy = 0, maxDy = 0;
   nodesForFrame.forEach(n => {
     if (n.x == null || n.y == null) return;
-    maxDx = Math.max(maxDx, Math.abs(n.x - centerNode.x));
-    maxDy = Math.max(maxDy, Math.abs(n.y - centerNode.y));
+    const dx = n.x - centerNode.x;
+    const dy = n.y - centerNode.y;
+    minDx = Math.min(minDx, dx);
+    maxDx = Math.max(maxDx, dx);
+    minDy = Math.min(minDy, dy);
+    maxDy = Math.max(maxDy, dy);
   });
 
   const w = window.innerWidth, h = window.innerHeight;
@@ -489,21 +493,42 @@ function frameNodeSetView(centerNode, nodeIds, duration = 0, options = {}) {
   const bottomPad = isMobile() ? 92 : 94;
   const availableW = Math.max(220, w - leftPad - rightPad);
   const availableH = Math.max(220, h - topPad - bottomPad);
-  const gw = Math.max(maxDx * 2, 120);
-  const gh = Math.max(maxDy * 2, 120);
+  const gw = Math.max(Math.max(Math.abs(minDx), Math.abs(maxDx)) * 2, 120);
+  const gh = Math.max(Math.max(Math.abs(minDy), Math.abs(maxDy)) * 2, 120);
   const currentScale = d3.zoomTransform(svg.node()).k;
   const fitScale = Math.min(availableW / gw, availableH / gh);
-  const scale = options.allowInitialReadableScale
-    ? Math.min(Math.max(fitScale, minReadableScale()), maxReadableScale())
-    : currentScale;
-  const targetX = leftPad + availableW / 2;
-  const targetY = topPad + availableH / 2;
+  let scale = currentScale;
+  if (options.allowInitialReadableScale) {
+    scale = Math.min(Math.max(fitScale, minReadableScale()), maxReadableScale());
+  } else if (options.allowSoftScale) {
+    const softMin = currentScale * 0.95;
+    const softMax = currentScale * 1.05;
+    scale = Math.min(Math.max(clampScale(fitScale), softMin), softMax);
+    scale = clampScale(scale);
+  }
+
+  const desiredX = options.viewportCenter ? w / 2 : leftPad + availableW / 2;
+  const desiredY = options.viewportCenter ? h / 2 : topPad + availableH / 2;
+  let targetX = desiredX;
+  let targetY = desiredY;
+  if (options.keepFrameVisible) {
+    const minTargetX = leftPad - minDx * scale;
+    const maxTargetX = w - rightPad - maxDx * scale;
+    const minTargetY = topPad - minDy * scale;
+    const maxTargetY = h - bottomPad - maxDy * scale;
+    if (minTargetX <= maxTargetX) targetX = Math.min(Math.max(desiredX, minTargetX), maxTargetX);
+    if (minTargetY <= maxTargetY) targetY = Math.min(Math.max(desiredY, minTargetY), maxTargetY);
+  }
   const t = d3.zoomIdentity.translate(targetX, targetY).scale(scale).translate(-centerNode.x, -centerNode.y);
-  (duration ? svg.transition().duration(duration) : svg).call(zoom.transform, t);
+  (duration ? svg.transition().duration(duration).ease(d3.easeCubicOut) : svg).call(zoom.transform, t);
 }
 
 function focusNeighborhoodView(centerNode, connectedIds, duration = 0) {
-  frameNodeSetView(centerNode, connectedIds, duration);
+  frameNodeSetView(centerNode, connectedIds, duration, {
+    allowSoftScale: true,
+    viewportCenter: true,
+    keepFrameVisible: true,
+  });
 }
 
 // 焦点节点：连接最密集的枢纽（多为某座城市或核心厂牌），作为移动端的引导入口
@@ -539,7 +564,7 @@ linkEl
   .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
 nodeEl.attr('transform', d => `translate(${d.x},${d.y})`);
 applyLabelVisibility(1.05);
-// 入口视图只在这里定位一次（此后相机不再自动移动）
+// 入口视图只在这里定位一次，后续相机只随用户操作和焦点反馈移动。
 entryView(0);
 
 // 控制按钮
