@@ -196,6 +196,17 @@
   .node circle { transition: r 0.2s; }
   .node:hover circle { }
   .node text { pointer-events: none; }
+  .node .micro-label {
+    fill: #777;
+    font-size: 7.5px;
+    letter-spacing: 0.04em;
+    opacity: 0.72;
+  }
+  .node.highlighted .micro-label,
+  .node.focus-center .micro-label {
+    fill: #a8a197;
+    opacity: 0.88;
+  }
 
   .link {
     stroke-opacity: 0.22;
@@ -636,16 +647,89 @@ let highlightOn = false;
 function applyLabelVisibility(scale) {
   if (scale == null) scale = d3.zoomTransform(svg.node()).k;
   const showMinor = scale >= 0.55;
-  nodeEl.selectAll('text').style('display', n => (showMinor || ANCHOR_LABEL.has(n.type)) ? null : 'none');
+  const showMicro = scale >= 0.9;
+  nodeEl.selectAll('text.node-name').style('display', n => (showMinor || ANCHOR_LABEL.has(n.type)) ? null : 'none');
+  nodeEl.selectAll('text.micro-label').style('display', n => showMicro ? null : 'none');
 }
 
 nodeEl.append('text')
+  .attr('class', 'node-name')
   .text(d => d.label)
   .attr('dy', d => nodeRadius(d) + 11)
   .attr('text-anchor', 'middle')
   .attr('font-size', d => d.type === 'Label' ? (isMobile() ? 11 : 10) : (isMobile() ? 10 : 9))
   .attr('fill', d => d.type === 'City' ? '#7ab87a' : '#b0aaa0')
   .attr('letter-spacing', '0.04em');
+
+const microTypeLabels = { Band:'band', Person:'person', Label:'label', City:'city', Project:'project', Venue:'venue', Event:'event' };
+const cityAnchors = {
+  city_la:'LA',
+  city_dc:'DC',
+  city_boston:'Boston',
+  city_chicago:'Chicago',
+  city_olympia:'Olympia',
+  city_seattle:'Seattle',
+  city_minneapolis:'MPLS',
+  city_ny:'NYC',
+  city_sp:'San Pedro',
+  city_sf:'SF',
+  city_austin:'Austin',
+  city_amherst:'Amherst',
+  city_toledo:'Toledo',
+  city_athens:'Athens',
+  city_london:'UK',
+  city_phoenix:'Phoenix',
+  city_vancouver:'Vancouver',
+  city_hoboken:'Hoboken',
+  city_arlington:'Arlington',
+};
+
+function rawEndpointId(endpoint) {
+  return endpoint && endpoint.id ? endpoint.id : endpoint;
+}
+
+function firstStyleAnchor(detail = '') {
+  const stylePart = detail.split('｜')[1];
+  if (!stylePart) return '';
+  return stylePart.split(/[\/／、,，]/)[0].trim().replace(/\s+/g, ' ');
+}
+
+function decadeAnchor(text = '') {
+  const decade = text.match(/\b(19[789]0s|20[012]0s)\b/i);
+  if (decade) return decade[1];
+  const year = text.match(/\b(19[7-9]\d|20[0-2]\d)\b/);
+  return year ? `${Math.floor(Number(year[1]) / 10) * 10}s` : '';
+}
+
+function directCityAnchor(id) {
+  const link = filteredLinks.find(l => l.type === 'location_of' && (rawEndpointId(l.source) === id || rawEndpointId(l.target) === id));
+  if (!link) return '';
+  const otherId = rawEndpointId(link.source) === id ? rawEndpointId(link.target) : rawEndpointId(link.source);
+  return cityAnchors[otherId] || '';
+}
+
+function indirectCityAnchor(d) {
+  if (d.type !== 'Person') return '';
+  const membership = filteredLinks.find(l => l.type === 'membership' && (rawEndpointId(l.source) === d.id || rawEndpointId(l.target) === d.id));
+  if (!membership) return '';
+  const otherId = rawEndpointId(membership.source) === d.id ? rawEndpointId(membership.target) : rawEndpointId(membership.source);
+  return directCityAnchor(otherId);
+}
+
+function microContextLabel(d) {
+  const type = microTypeLabels[d.type] || String(d.type || '').toLowerCase();
+  const anchor = d.type === 'City'
+    ? (cityAnchors[d.id] || '')
+    : firstStyleAnchor(d.detail) || directCityAnchor(d.id) || indirectCityAnchor(d) || decadeAnchor(`${d.label} ${d.detail || ''}`);
+  const label = anchor ? `${type} · ${anchor}` : type;
+  return label.length > 18 ? `${label.slice(0, 15)}...` : label;
+}
+
+nodeEl.append('text')
+  .attr('class', 'micro-label')
+  .text(microContextLabel)
+  .attr('dy', d => nodeRadius(d) + 22)
+  .attr('text-anchor', 'middle');
 
 // Focus controller & neighborhood state
 const focusPanel = document.getElementById('focus-panel');
@@ -731,8 +815,10 @@ function applyFocusState(reframe = false) {
 
   // 焦点模式下只保留焦点邻域与锚点标签，迫使理解回到 graph。
   highlightOn = true;
-  nodeEl.selectAll('text').style('display', n =>
+  nodeEl.selectAll('text.node-name').style('display', n =>
     (connected.has(n.id) || ANCHOR_LABEL.has(n.type)) ? null : 'none');
+  nodeEl.selectAll('text.micro-label').style('display', n =>
+    connected.has(n.id) ? null : 'none');
 
   renderFocusController(activeNode);
   updateViewSummary();
@@ -951,7 +1037,8 @@ window.addEventListener('resize', () => {
   // 跨断点时重算与移动端相关的视觉量
   nodeEl.select('circle.dot').attr('r', nodeRadius);
   nodeEl.select('circle.hit').attr('r', d => nodeRadius(d) + (isMobile() ? 16 : 8));
-  nodeEl.select('text').attr('dy', d => nodeRadius(d) + 11);
+  nodeEl.select('text.node-name').attr('dy', d => nodeRadius(d) + 11);
+  nodeEl.select('text.micro-label').attr('dy', d => nodeRadius(d) + 22);
   if (!highlightOn) applyLabelVisibility();
   updateViewSummary();
   sim.alpha(0.2).restart();
