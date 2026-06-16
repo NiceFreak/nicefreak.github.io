@@ -82,6 +82,48 @@
 }
 #focus-panel .ft-rel.indirect { color: #5f584e; }
 
+/* 世系回放控件：沿 succession 簇逐级推进“时间的路” */
+#focus-panel .fp-lineage {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 9px;
+  border-top: 1px solid #2b2b2b;
+}
+#focus-panel .fp-lineage.show { display: flex; }
+
+#focus-panel .fl-heading {
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a8378;
+}
+
+#focus-panel .fl-row {
+  display: flex;
+  gap: 6px;
+}
+
+#focus-panel .fl-btn {
+  appearance: none;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  color: #cfcabf;
+  background: #1d1d1d;
+  border: 1px solid #3c3c3c;
+  padding: 7px 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  overflow-wrap: anywhere;
+}
+#focus-panel .fl-btn:hover:not(:disabled) { color: #e8e4dc; border-color: #555; background: #242424; }
+#focus-panel .fl-btn:disabled { color: #4a4a4a; border-color: #262626; background: #111; cursor: default; }
+#focus-panel .fl-next { flex: 1; text-align: left; }
+#focus-panel .fl-enter { width: 100%; text-align: center; color: #c9a94e; border-color: #5a4f30; background: #221f17; }
+#focus-panel .fl-enter:hover { color: #e0c873; border-color: #c9a94e; background: #2a2419; }
+
 /* 关系实质条：走过一步时显示这条连接到底是什么 */
 #focus-panel .fp-edge {
   display: none;

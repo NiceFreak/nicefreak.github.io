@@ -315,7 +315,50 @@ function syncTrailDerived() {
   previousNode = trail.length >= 2 ? trail[trail.length - 2] : null;
 }
 
-function selectNode(d) {
+// ── 世系回放：succession 簇的相对时序（前身=早 → 后继=晚） ──
+// succession 边方向：source=前身（早），target=后继（晚）。
+const succLater = new Map();   // id → 后继[]
+const succEarlier = new Map(); // id → 前身[]
+filteredLinks.filter(l => l.type === 'succession').forEach(l => {
+  const early = endpointId(l.source), late = endpointId(l.target);
+  if (!succLater.has(early)) succLater.set(early, []);
+  if (!succEarlier.has(late)) succEarlier.set(late, []);
+  succLater.get(early).push(late);
+  succEarlier.get(late).push(early);
+});
+
+function hasLineage(id) {
+  return succLater.has(id) || succEarlier.has(id);
+}
+
+// 沿某方向的最长链（不含起点），带访问保护以防意外环
+function longestChain(map, id, seen) {
+  let best = [];
+  (map.get(id) || []).forEach(next => {
+    if (seen.has(next)) return;
+    seen.add(next);
+    const sub = longestChain(map, next, seen);
+    seen.delete(next);
+    if (sub.length + 1 > best.length) best = [next, ...sub];
+  });
+  return best;
+}
+
+// 经过某乐队的一条线性世系：往前追到最早前身，往后追到最晚后继；分叉取最长支。
+// 返回节点数组，时间由早到晚。
+function lineagePathThrough(id) {
+  const back = longestChain(succEarlier, id, new Set([id])).reverse();
+  const fwd = longestChain(succLater, id, new Set([id]));
+  return [...back, id, ...fwd].map(x => nodeById.get(x)).filter(Boolean);
+}
+
+function selectNode(d, opts = {}) {
+  // 普通导航会退出世系回放；回放内部推进时显式标记 lineage:true 以保留模式。
+  if (!opts.lineage) {
+    lineageMode = false;
+    lineagePath = [];
+    lineageIndex = -1;
+  }
   const existingIndex = trail.findIndex(n => n.id === d.id);
   if (existingIndex >= 0) {
     // 点到轨迹里已经走过的节点 = 逐级回退到那一步
@@ -328,8 +371,30 @@ function selectNode(d) {
   applyFocusState(true);
 }
 
+function startLineageReplay(d) {
+  if (!d || !hasLineage(d.id)) return;
+  const path = lineagePathThrough(d.id);
+  if (path.length < 2) return;
+  lineagePath = path;
+  lineageIndex = 0;
+  lineageMode = true;
+  trail.length = 0;
+  selectNode(path[0], { lineage: true });
+}
+
+function lineageStep(delta) {
+  if (!lineageMode) return;
+  const next = lineageIndex + delta;
+  if (next < 0 || next >= lineagePath.length) return;
+  lineageIndex = next;
+  selectNode(lineagePath[lineageIndex], { lineage: true });
+}
+
 function clearSelection() {
   trail.length = 0;
+  lineageMode = false;
+  lineagePath = [];
+  lineageIndex = -1;
   syncTrailDerived();
   activeRelationType = null;
   clearFocusVisuals();

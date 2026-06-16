@@ -52,6 +52,11 @@ let activeNode = null;
 // previousNode 仍保留，但作为派生值（trail 的倒数第二个），供高亮/步迹复用。
 let trail = [];
 let previousNode = null;
+// 世系回放：沿 succession 簇（前身→后继，时间由早到晚）逐级推进。
+// 仅相对时序 + 稀疏年份锚点，不构造连续年代轴，不跨簇排序。
+let lineageMode = false;
+let lineagePath = [];
+let lineageIndex = -1;
 let activeRelationType = null;
 const hiddenTypes = new Set();
 const hiddenRelationTypes = new Set();
