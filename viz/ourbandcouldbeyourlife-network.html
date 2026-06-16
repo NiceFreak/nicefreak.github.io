@@ -665,11 +665,18 @@ function entryView(duration = 0) {
   (duration ? svg.transition().duration(duration) : svg).call(zoom.transform, t);
 }
 
-// 力导向收敛后自动定位一次入口视图
-let fittedOnce = false;
-sim.on('end', () => { if (!fittedOnce) { fittedOnce = true; entryView(0); } });
-// 兜底：即使迟迟未触发 end，也在短暂预热后先定位一次
-setTimeout(() => entryView(0), 1200);
+// 预热力导向：在首屏绘制前同步收敛到最终布局，然后只定位一次相机。
+// 这样可避免移动端「收敛漂移」以及收敛后相机二次回中造成的整体轻微位移抖动。
+sim.alpha(1).stop();
+for (let i = 0; i < 320; i++) sim.tick();
+// 把最终位置一次性刷到 DOM
+linkEl
+  .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+  .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+nodeEl.attr('transform', d => `translate(${d.x},${d.y})`);
+applyLabelVisibility(1.05);
+// 入口视图只在这里定位一次（此后相机不再自动移动）
+entryView(0);
 
 // 控制按钮
 document.getElementById('btn-zoom-in').addEventListener('click', () =>
@@ -723,9 +730,12 @@ function clearScene() {
 }
 
 // 旋屏 / 窗口尺寸变化：更新力的中心、按当前断点重算半径与热区，并重新适配视图
-let resizeTimer = null;
+let resizeTimer = null, lastW = window.innerWidth;
 window.addEventListener('resize', () => {
   const w = window.innerWidth, h = window.innerHeight;
+  // 移动端忽略「仅高度变化」（多为地址栏显隐）——否则会无谓重排并让相机抖动
+  if (isMobile() && w === lastW) return;
+  lastW = w;
   sim.force('center', d3.forceCenter(w/2, h/2));
   sim.force('x', d3.forceX(w/2).strength(0.05));
   sim.force('y', d3.forceY(h/2).strength(0.05));
