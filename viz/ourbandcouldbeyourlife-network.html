@@ -759,44 +759,267 @@ function microContextLabel(d) {
   return label.length > 18 ? `${label.slice(0, 15)}...` : label;
 }
 
-function relationProfile(d) {
-  const linksByType = new Map();
-  filteredLinks.forEach(l => {
-    if (rawEndpointId(l.source) !== d.id && rawEndpointId(l.target) !== d.id) return;
-    if (!isLinkVisible(l)) return;
-    linksByType.set(l.type, (linksByType.get(l.type) || 0) + 1);
-  });
-  return linksByType;
+function cleanPhrase(text) {
+  return String(text || '')
+    .replace(/\s+/g, ' ')
+    .replace(/^[：:，,、\s]+|[。；;，,\s]+$/g, '')
+    .trim();
 }
 
-function dominantRelationLabel(profile) {
-  let best = null, count = 0;
-  profile.forEach((value, key) => {
-    if (value > count) { best = key; count = value; }
-  });
-  return best ? formatLabel('relation', best) : '关系';
+function fieldValue(d, keys) {
+  for (const key of keys) {
+    const value = d && d[key];
+    if (value == null || value === '') continue;
+    return cleanPhrase(value);
+  }
+  return '';
 }
 
-function structuralInterpretation(d) {
-  const profile = relationProfile(d);
-  const degree = [...profile.values()].reduce((sum, value) => sum + value, 0);
-  const rel = dominantRelationLabel(profile);
-  const place = d.type === 'City' ? placeAnchorFromNodeId(d.id) : directCityAnchor(d.id) || indirectCityAnchor(d);
+function splitValues(value) {
+  return String(value || '')
+    .split(/[、,，;；/／|｜]+/)
+    .map(cleanPhrase)
+    .filter(Boolean);
+}
+
+function uniqueCompact(items) {
+  const seen = new Set();
+  return items.map(cleanPhrase).filter(item => {
+    if (!item) return false;
+    const key = item.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function otherNodeForLink(d, l) {
+  const sourceId = rawEndpointId(l.source);
+  const targetId = rawEndpointId(l.target);
+  if (sourceId !== d.id && targetId !== d.id) return null;
+  return nodeById.get(sourceId === d.id ? targetId : sourceId) || null;
+}
+
+function relationLinks(d, type) {
+  return filteredLinks.filter(l =>
+    (!type || l.type === type) &&
+    (rawEndpointId(l.source) === d.id || rawEndpointId(l.target) === d.id)
+  );
+}
+
+function relatedNodes(d, type, nodeType) {
+  const nodesForType = relationLinks(d, type)
+    .map(l => otherNodeForLink(d, l))
+    .filter(n => n && (!nodeType || n.type === nodeType));
+  const seen = new Set();
+  return nodesForType.filter(n => {
+    if (seen.has(n.id)) return false;
+    seen.add(n.id);
+    return true;
+  });
+}
+
+function relatedNames(d, type, nodeType) {
+  return relatedNodes(d, type, nodeType).map(n => n.label);
+}
+
+function sceneAnchor(d) {
+  const explicit = fieldValue(d, ['章节来源', 'chapterSource', 'chapter_source', 'sourceChapter', 'source']);
+  if (explicit) return explicit;
+  const scene = scenes.find(sc => (sc.nodes || []).includes(d.id));
+  return scene ? cleanPhrase(scene.label) : '';
+}
+
+function chapterAnchor(d) {
+  const explicit = fieldValue(d, ['章节', 'chapterName', 'chapterTitle']);
+  if (explicit) return explicit;
+  if (d.chapter === 0) return '引言';
+  return d.chapter ? `第${d.chapter}章` : '';
+}
+
+function detailSegments(d) {
+  const explicit = fieldValue(d, ['一句话简介', '简介', 'summary', 'intro', 'description', '备注', 'notes', 'note']);
+  const text = explicit || String(d.detail || '').split('｜')[0];
+  return text.split(/[；。]/).map(cleanPhrase).filter(Boolean);
+}
+
+function summaryAnchor(d) {
+  const segments = detailSegments(d);
+  return segments.find(s => !/^(创始人|联合创始人|旗下|成员|位于|大本营)[：:]/.test(s)) || '';
+}
+
+function styleAnchors(d) {
+  const explicit = []
+    .concat(splitValues(fieldValue(d, ['主风格', 'mainStyle', 'main_style', 'primaryStyle', 'primary_style', 'primaryGenre', 'primary_genre', 'genre', 'style'])))
+    .concat(splitValues(fieldValue(d, ['次风格', 'secondaryStyle', 'secondary_style', 'secondaryGenre', 'secondary_genre', 'subGenre', 'sub_genre'])));
+  const detailStyle = String(d.detail || '').split('｜')[1] || '';
+  return uniqueCompact(explicit.concat(splitValues(detailStyle))).map(s => formatLabel('style', s)).slice(0, 2);
+}
+
+function cityThroughRelatedEntity(d) {
+  const carriers = []
+    .concat(relatedNodes(d, 'membership', 'Band'))
+    .concat(relatedNodes(d, 'affiliation', 'Band'))
+    .concat(relatedNodes(d, 'collaboration', 'Band'))
+    .concat(relatedNodes(d, 'appearance', 'Venue'));
+  for (const node of carriers) {
+    const city = directCityAnchor(node.id);
+    if (city) return city;
+  }
+  return '';
+}
+
+function cityAnchor(d) {
+  const explicit = fieldValue(d, ['城市', 'city', 'homeCity', 'home_city', 'baseCity', 'base_city', 'location']);
+  if (explicit) return formatLabel('place', explicit);
+  if (d.type === 'City') return placeAnchorFromNodeId(d.id);
+  return directCityAnchor(d.id) || indirectCityAnchor(d) || cityThroughRelatedEntity(d);
+}
+
+function labelAnchors(d) {
+  const explicit = splitValues(fieldValue(d, ['签约厂牌', '厂牌信息', '厂牌', 'recordLabel', 'record_label', 'labelName', 'label_name']));
+  const linked = relatedNames(d, 'affiliation', 'Label');
+  const self = d.type === 'Label' ? [d.label] : [];
+  return uniqueCompact(self.concat(explicit, linked)).slice(0, 2);
+}
+
+function roleBandAnchors(d) {
+  return uniqueCompact(
+    relatedNames(d, 'membership', 'Band')
+      .concat(relatedNames(d, 'affiliation', 'Band'))
+      .concat(relatedNames(d, 'appearance', 'Band'))
+  ).slice(0, 3);
+}
+
+function collaborationAnchors(d) {
+  return uniqueCompact(
+    relatedNames(d, 'collaboration')
+      .concat(relatedNames(d, 'appearance').filter(name => name !== d.label))
+  ).slice(0, 3);
+}
+
+function localEntityAnchors(d) {
+  if (d.type !== 'City') return [];
+  return uniqueCompact(
+    relatedNames(d, 'location_of', 'Band')
+      .concat(relatedNames(d, 'location_of', 'Label'))
+      .concat(relatedNames(d, 'location_of', 'Venue'))
+  ).slice(0, 3);
+}
+
+function successionAnchors(d) {
+  const predecessors = [];
+  const successors = [];
+  relationLinks(d, 'succession').forEach(l => {
+    const sourceId = rawEndpointId(l.source);
+    const targetId = rawEndpointId(l.target);
+    if (targetId === d.id && nodeById.has(sourceId)) predecessors.push(nodeById.get(sourceId).label);
+    if (sourceId === d.id && nodeById.has(targetId)) successors.push(nodeById.get(targetId).label);
+  });
+  return {
+    predecessors: uniqueCompact(predecessors).slice(0, 2),
+    successors: uniqueCompact(successors).slice(0, 2),
+  };
+}
+
+function rosterAnchors(d) {
+  if (d.type !== 'Label') return [];
+  const fromLinks = relatedNames(d, 'affiliation', 'Band');
+  const fromDetail = (String(d.detail || '').match(/旗下[：:]\s*([^；]+)/) || [])[1];
+  return uniqueCompact(fromLinks.concat(splitValues(fromDetail))).slice(0, 3);
+}
+
+function joinNames(items, limit = 2) {
+  return uniqueCompact(items).slice(0, limit).join('、');
+}
+
+function compactLine(line, maxLength = 38) {
+  const text = cleanPhrase(line);
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 1)}…`;
+}
+
+function fieldGroundedFacts(d) {
+  const succession = successionAnchors(d);
+  return {
+    type: formatLabel('type', d.type),
+    city: cityAnchor(d),
+    scene: sceneAnchor(d),
+    chapter: chapterAnchor(d),
+    styles: styleAnchors(d),
+    labels: labelAnchors(d),
+    bands: roleBandAnchors(d),
+    localEntities: localEntityAnchors(d),
+    roster: rosterAnchors(d),
+    collaborators: collaborationAnchors(d),
+    predecessors: succession.predecessors,
+    successors: succession.successors,
+    summary: summaryAnchor(d),
+  };
+}
+
+function fieldGroundedInterpretation(d) {
+  const f = fieldGroundedFacts(d);
   const lines = [];
+  const place = f.city || f.scene;
+  const style = joinNames(f.styles);
+  const label = joinNames(f.labels);
+  const bands = joinNames(f.bands);
+  const localEntities = joinNames(f.localEntities);
+  const roster = joinNames(f.roster);
+  const collaborators = joinNames(f.collaborators);
 
-  if (d.type === 'Label') lines.push(`以${rel}关系组织周边节点`);
-  else if (d.type === 'City') lines.push(`${place || d.label}场景的空间锚点`);
-  else if (d.type === 'Person') lines.push(`通过${rel}关系连接不同实体`);
-  else if (d.type === 'Band') lines.push(`在${rel}关系中形成邻域核心`);
-  else lines.push(`通过${rel}关系进入网络`);
+  if (d.type === 'Band') {
+    if (place && style && label) lines.push(`${place}的${style}乐队，进入${label}的独立发行脉络`);
+    else if (place && style) lines.push(`${place}的${style}乐队，体现当地地下音乐的一条方向`);
+    else if (style && f.summary) lines.push(`${style}语汇下的代表之一，${f.summary}`);
 
-  if (degree >= 6) lines.push('邻域密度高，可继续横向移动');
-  else if (profile.has('succession')) lines.push('连接前身/后继的演化路径');
-  else if (profile.has('location_of') && place) lines.push(`与${place}场景形成定位`);
-  else if (profile.has('collaboration')) lines.push('合作边提供下一步延展');
-  else lines.push('一阶邻域提供下一步入口');
+    if (f.predecessors.length && f.successors.length) lines.push(`承接${joinNames(f.predecessors)}，并延伸到${joinNames(f.successors)}`);
+    else if (f.predecessors.length) lines.push(`由${joinNames(f.predecessors)}延伸而来，带出后续风格转向`);
+    else if (f.successors.length) lines.push(`其成员和方向延续到${joinNames(f.successors)}`);
+    else if (f.summary) lines.push(f.summary);
+    else if (collaborators) lines.push(`与${collaborators}的往来，标出它在同期场景中的位置`);
+  } else if (d.type === 'Label') {
+    if (place && roster) lines.push(`${place}厂牌，以${roster}等乐队塑造独立发行体系`);
+    else if (roster) lines.push(`以${roster}等乐队为核心，扩展独立发行实践`);
+    else if (f.summary) lines.push(f.summary);
 
-  return lines.slice(0, 2);
+    if (f.scene) lines.push(`${f.scene}中的组织力量，影响乐队录音与流通方式`);
+    else if (collaborators) lines.push(`与${collaborators}的合作，体现地下场景的信息流通`);
+  } else if (d.type === 'Person') {
+    if (bands && label) lines.push(`同时参与${bands}与${label}相关事务，兼具创作和组织角色`);
+    else if (bands && place) lines.push(`作为${bands}相关人物，参与${place}场景的形成`);
+    else if (bands) lines.push(`通过${bands}留下成员、创作或组织层面的痕迹`);
+    else if (label && f.summary) lines.push(`与${label}相关，${f.summary}`);
+    else if (label) lines.push(`参与${label}相关事务，体现厂牌组织角色`);
+
+    if (f.summary && !lines.includes(f.summary)) lines.push(f.summary);
+    else if (collaborators) lines.push(`与${collaborators}的合作，补足其在场景中的角色`);
+  } else if (d.type === 'City') {
+    if (f.scene && localEntities) lines.push(`${f.scene}的城市背景，承载${localEntities}等音乐活动`);
+    else if (localEntities) lines.push(`${d.label}承载${localEntities}等乐队/场地，是场景地理背景`);
+    else lines.push(`${d.label}是相关乐队、厂牌与演出空间的地理背景`);
+
+    if (style) lines.push(`${style}等声音在这里形成可辨识的地方气质`);
+  } else if (d.type === 'Venue' || d.type === 'Event') {
+    if (place && bands) lines.push(`${place}的现场记忆，留下${bands}等乐队活动痕迹`);
+    else if (place && f.summary) lines.push(`${place}场景中的现场片段，${f.summary}`);
+    else if (f.summary) lines.push(f.summary);
+
+    if (collaborators) lines.push(`与${collaborators}相关，提示当时演出和社区关系`);
+  } else {
+    if (place && f.summary) lines.push(`${place}场景中的组织行动，${f.summary}`);
+    else if (bands) lines.push(`围绕${bands}等乐队展开，呈现地下场景的社区面`);
+    else if (f.summary) lines.push(f.summary);
+  }
+
+  if (!lines.length) {
+    if (place && label) lines.push(`${place}与${label}之间的音乐关系，使它具有场景意义`);
+    else if (style && f.chapter) lines.push(`${style}脉络中的${f.type}，出现在${f.chapter}相关叙述中`);
+    else lines.push(`${f.type}，可从相关乐队、厂牌与场景继续理解`);
+  }
+
+  return uniqueCompact(lines).slice(0, 2).map(line => compactLine(line));
 }
 
 nodeEl.append('text')
@@ -813,13 +1036,13 @@ interpretationEl.append('text')
   .attr('class', 'line-1')
   .attr('dy', d => -(nodeRadius(d) + 18))
   .attr('text-anchor', 'middle')
-  .text(d => structuralInterpretation(d)[0]);
+  .text(d => fieldGroundedInterpretation(d)[0]);
 
 interpretationEl.append('text')
   .attr('class', 'line-2')
   .attr('dy', d => -(nodeRadius(d) + 7))
   .attr('text-anchor', 'middle')
-  .text(d => structuralInterpretation(d)[1]);
+  .text(d => fieldGroundedInterpretation(d)[1]);
 
 // Focus controller & neighborhood state
 const focusPanel = document.getElementById('focus-panel');
