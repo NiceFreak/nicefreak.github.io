@@ -27,6 +27,61 @@
   letter-spacing: 0.15em;
 }
 
+/* 关系轨迹：把走过的节点链串成一句可读的叙事，可逐级回退 */
+#focus-panel .fp-trail {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+}
+#focus-panel .fp-trail.show { display: flex; }
+
+#focus-panel .ft-heading {
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #8a8378;
+}
+
+#focus-panel .ft-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px 4px;
+  max-height: 132px;
+  overflow-y: auto;
+}
+
+#focus-panel .ft-node {
+  appearance: none;
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: #cfcabf;
+  background: #1d1d1d;
+  border: 1px solid #383838;
+  border-left: 2px solid var(--node-color, #888);
+  padding: 3px 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  overflow-wrap: anywhere;
+}
+#focus-panel .ft-node:hover { color: #e8e4dc; border-color: #555; background: #242424; }
+#focus-panel .ft-node.current {
+  color: #e8e4dc;
+  background: #24211b;
+  border-color: var(--node-color, #888);
+  cursor: default;
+}
+
+#focus-panel .ft-rel {
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  color: #8f8a80;
+  white-space: nowrap;
+}
+#focus-panel .ft-rel.indirect { color: #5f584e; }
+
 /* 关系实质条：走过一步时显示这条连接到底是什么 */
 #focus-panel .fp-edge {
   display: none;

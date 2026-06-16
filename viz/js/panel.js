@@ -341,6 +341,7 @@ function describeStepEdges() {
 
 // Focus controller & neighborhood state
 const focusPanel = document.getElementById('focus-panel');
+const focusTrail = document.getElementById('focus-trail');
 const focusEdge = document.getElementById('focus-edge');
 const focusName = document.getElementById('focus-name');
 const focusType = document.getElementById('focus-type');
@@ -348,6 +349,58 @@ const focusIdentity = document.getElementById('focus-identity');
 const focusSummary = document.getElementById('focus-summary');
 const focusFacts = document.getElementById('focus-facts');
 const focusChips = document.getElementById('focus-chips');
+
+// 把走过的节点链串成一句可读的关系轨迹：A —[合作]→ B —[成员]→ C。
+// 方向按行走顺序（trail[i] → trail[i+1]）；点击较早的节点逐级回退。
+function renderTrail() {
+  focusTrail.replaceChildren();
+  if (!trail || trail.length < 2) {
+    focusTrail.classList.remove('show');
+    return;
+  }
+  const heading = document.createElement('div');
+  heading.className = 'ft-heading';
+  heading.textContent = '轨迹';
+  focusTrail.appendChild(heading);
+
+  const chain = document.createElement('div');
+  chain.className = 'ft-chain';
+  trail.forEach((n, i) => {
+    if (i > 0) {
+      const link = (typeof directLinkBetween === 'function')
+        ? directLinkBetween(trail[i - 1].id, n.id) : null;
+      const sep = document.createElement('span');
+      sep.className = 'ft-rel';
+      if (link) {
+        sep.textContent = `—${formatLabel('relation', link.type)}→`;
+        sep.style.color = LINK_COLORS[link.type] || '';
+      } else {
+        // 非直接相邻（如经由二阶节点跳过来）：中性箭头，不编造关系
+        sep.textContent = '→';
+        sep.classList.add('indirect');
+      }
+      chain.appendChild(sep);
+    }
+    const isCurrent = i === trail.length - 1;
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'ft-node';
+    chip.classList.toggle('current', isCurrent);
+    chip.textContent = n.label;
+    chip.style.setProperty('--node-color', COLORS[n.type] || '#888');
+    if (!isCurrent) {
+      chip.addEventListener('click', e => {
+        e.stopPropagation();
+        selectNode(n);
+      });
+    }
+    chain.appendChild(chip);
+  });
+  focusTrail.appendChild(chain);
+  focusTrail.classList.add('show');
+  // 轨迹变长时滚动到最新一步
+  chain.scrollTop = chain.scrollHeight;
+}
 
 function renderEdgeBanner() {
   focusEdge.replaceChildren();
@@ -404,8 +457,11 @@ function renderFocusController(d) {
     focusChips.replaceChildren();
     focusEdge.replaceChildren();
     focusEdge.classList.remove('show');
+    focusTrail.replaceChildren();
+    focusTrail.classList.remove('show');
     return;
   }
+  renderTrail();
   renderEdgeBanner();
   focusName.textContent = d.label;
   focusType.textContent = formatLabel('type', d.type);

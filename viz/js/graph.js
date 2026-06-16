@@ -301,16 +301,36 @@ function clearFocusVisuals() {
   renderFocusController(null);
 }
 
+// 两个节点之间的直接可见连接（用于把轨迹串成「A —[关系]→ B」）。无直接边则返回 null。
+function directLinkBetween(aId, bId) {
+  return filteredLinks.find(l => {
+    if (!isLinkVisible(l)) return false;
+    const s = endpointId(l.source), t = endpointId(l.target);
+    return (s === aId && t === bId) || (s === bId && t === aId);
+  }) || null;
+}
+
+function syncTrailDerived() {
+  activeNode = trail.length ? trail[trail.length - 1] : null;
+  previousNode = trail.length >= 2 ? trail[trail.length - 2] : null;
+}
+
 function selectNode(d) {
-  previousNode = activeNode && activeNode.id !== d.id ? activeNode : null;
-  activeNode = d;
+  const existingIndex = trail.findIndex(n => n.id === d.id);
+  if (existingIndex >= 0) {
+    // 点到轨迹里已经走过的节点 = 逐级回退到那一步
+    trail.length = existingIndex + 1;
+  } else {
+    trail.push(d);
+  }
+  syncTrailDerived();
   activeRelationType = null;
   applyFocusState(true);
 }
 
 function clearSelection() {
-  activeNode = null;
-  previousNode = null;
+  trail.length = 0;
+  syncTrailDerived();
   activeRelationType = null;
   clearFocusVisuals();
   updateViewSummary();
