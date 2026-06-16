@@ -313,14 +313,85 @@ function identityFacts(d) {
   return facts.slice(0, 3);
 }
 
+// ── 关系实质：走过一步时，回答“他们到底是怎么连上的” ──
+// 只用数据里已有的字段：关系类型、两端节点、连接标签，以及标签/端点里本就出现的年份。
+function extractYear(text) {
+  const m = String(text || '').match(/\b(19[5-9]\d|20[0-2]\d)\b/);
+  return m ? m[1] : '';
+}
+
+function describeStepEdges() {
+  if (typeof stepTraceLinks !== 'function') return [];
+  return stepTraceLinks().map(l => {
+    const source = nodeById.get(rawEndpointId(l.source));
+    const target = nodeById.get(rawEndpointId(l.target));
+    const fact = cleanPhrase(l.label);
+    return {
+      type: l.type,
+      typeLabel: formatLabel('relation', l.type),
+      color: LINK_COLORS[l.type] || '#b0aaa0',
+      source: source ? source.label : rawEndpointId(l.source),
+      target: target ? target.label : rawEndpointId(l.target),
+      fact,
+      // 年份只取标签 / 端点名称里本就写明的，不推断、不编造
+      year: extractYear(fact) || extractYear(source && source.label) || extractYear(target && target.label),
+    };
+  });
+}
+
 // Focus controller & neighborhood state
 const focusPanel = document.getElementById('focus-panel');
+const focusEdge = document.getElementById('focus-edge');
 const focusName = document.getElementById('focus-name');
 const focusType = document.getElementById('focus-type');
 const focusIdentity = document.getElementById('focus-identity');
 const focusSummary = document.getElementById('focus-summary');
 const focusFacts = document.getElementById('focus-facts');
 const focusChips = document.getElementById('focus-chips');
+
+function renderEdgeBanner() {
+  focusEdge.replaceChildren();
+  const edges = describeStepEdges();
+  if (!edges.length) {
+    focusEdge.classList.remove('show');
+    return;
+  }
+  const heading = document.createElement('div');
+  heading.className = 'fe-heading';
+  heading.textContent = '这一步的关系';
+  focusEdge.appendChild(heading);
+
+  edges.forEach(e => {
+    const row = document.createElement('div');
+    row.className = 'fe-row';
+    const tag = document.createElement('span');
+    tag.className = 'fe-type';
+    tag.textContent = e.typeLabel;
+    tag.style.color = e.color;
+    tag.style.borderColor = e.color;
+    row.appendChild(tag);
+    if (e.year) {
+      const y = document.createElement('span');
+      y.className = 'fe-year';
+      y.textContent = e.year;
+      row.appendChild(y);
+    }
+    focusEdge.appendChild(row);
+
+    const path = document.createElement('div');
+    path.className = 'fe-path';
+    path.textContent = `${e.source} → ${e.target}`;
+    focusEdge.appendChild(path);
+
+    if (e.fact) {
+      const fact = document.createElement('div');
+      fact.className = 'fe-fact';
+      fact.textContent = e.fact;
+      focusEdge.appendChild(fact);
+    }
+  });
+  focusEdge.classList.add('show');
+}
 
 function renderFocusController(d) {
   if (!d) {
@@ -331,8 +402,11 @@ function renderFocusController(d) {
     focusSummary.textContent = '';
     focusFacts.replaceChildren();
     focusChips.replaceChildren();
+    focusEdge.replaceChildren();
+    focusEdge.classList.remove('show');
     return;
   }
+  renderEdgeBanner();
   focusName.textContent = d.label;
   focusType.textContent = formatLabel('type', d.type);
   focusType.style.color = COLORS[d.type] || '#888';

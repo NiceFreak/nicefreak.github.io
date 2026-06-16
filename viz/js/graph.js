@@ -245,6 +245,12 @@ function isStepTraceLink(l) {
   return (sid === activeNode.id && tid === previousNode.id) || (sid === previousNode.id && tid === activeNode.id);
 }
 
+// 刚刚走过的那一步对应的直接连接（可能不止一条：同一对节点间不同关系类型各算一条）
+function stepTraceLinks() {
+  if (!activeNode || !previousNode || activeNode.id === previousNode.id) return [];
+  return filteredLinks.filter(isStepTraceLink);
+}
+
 function applyFocusState(reframe = false) {
   if (!activeNode) {
     clearFocusVisuals();
