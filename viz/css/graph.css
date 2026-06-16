@@ -1,0 +1,89 @@
+svg { width: 100%; height: 100%; }
+
+.node { cursor: pointer; }
+.node circle { transition: r 0.2s; }
+.node:hover circle { }
+.node text { pointer-events: none; }
+.node .micro-label {
+  fill: #777;
+  font-size: 7.5px;
+  letter-spacing: 0.04em;
+  opacity: 0.72;
+}
+.node.highlighted .micro-label,
+.node.focus-center .micro-label {
+  fill: #a8a197;
+  opacity: 0.88;
+}
+.node .micro-interpretation {
+  pointer-events: none;
+}
+.node .micro-interpretation text {
+  fill: #d4cfc5;
+  font-size: 8px;
+  letter-spacing: 0.02em;
+  opacity: 0.86;
+  paint-order: stroke;
+  stroke: rgba(14,14,14,0.88);
+  stroke-width: 2.5px;
+  stroke-linejoin: round;
+}
+.node .micro-interpretation .line-2 {
+  fill: #a59d92;
+  opacity: 0.76;
+}
+
+.link {
+  stroke-opacity: 0.22;
+  transition: stroke-opacity 0.2s;
+}
+
+.link.highlighted { stroke-opacity: 0.95; }
+.link.step-trace {
+  stroke-opacity: 0.72;
+  stroke-dasharray: 5,3;
+}
+.link.path-hint {
+  stroke-opacity: 0.16;
+  stroke-dasharray: 2,5;
+}
+.link.dimmed { stroke-opacity: 0.04; }
+.node.dimmed { opacity: 0.12; }
+.node.second-hop { opacity: 0.34; }
+.node.highlighted { opacity: 1; }
+.node.previous-node { opacity: 0.58; }
+.node.second-hop circle.dot {
+  stroke-opacity: 0.42;
+  stroke-width: 1.3;
+}
+.node.previous-node circle.dot {
+  stroke-opacity: 0.68;
+  stroke-width: 1.6;
+  stroke-dasharray: 2,3;
+}
+.node.previous-node .node-name {
+  fill: #9b958b;
+}
+.node.second-hop .micro-label {
+  opacity: 0.48;
+}
+.node.focus-center circle.dot {
+  stroke-opacity: 1;
+  stroke-width: 2.6;
+  filter: url(#glow);
+}
+.node.neighbor circle.dot {
+  stroke-opacity: 0.72;
+  stroke-width: 2;
+}
+
+/* 场景高亮状态 */
+.node.scene-dim { opacity: 0.12; }
+.node.scene-lit circle { filter: url(#glow); }
+
+/* 触屏与缩放 */
+svg { touch-action: none; }
+
+@media (max-width: 768px) {
+  .node text { font-size: 11px; }
+}
