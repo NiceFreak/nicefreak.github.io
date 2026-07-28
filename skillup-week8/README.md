@@ -3,8 +3,8 @@
 在线地址：<https://nicefreak.github.io/skillup-week8/>
 
 这是 `nodejs-skillup` 仓库 `week8-fullstack` 前端里**零后端依赖的学习展板**部分，
-构建后放在这里供移动端复习。包含 5 个专题：认证与授权、OAuth2 流程、数据库聚合、
-Node.js 运行时、前端笔记；顶部可切换「展示 / 复习」两种内容状态。
+构建后放在这里供移动端复习。包含 6 个专题：认证与授权、OAuth2 流程、数据库聚合、
+Node.js 运行时、测试闭环、前端笔记；顶部可切换「展示 / 复习」两种内容状态。
 
 需要后端的「管理后台 / 登录 / JWT / RBAC / 报表」**不在此部署内**（构建时用
 `VITE_SHOWCASE_ONLY=1` 隐藏）。
@@ -17,4 +17,8 @@ Node.js 运行时、前端笔记；顶部可切换「展示 / 复习」两种内
 VITE_SHOWCASE_ONLY=1 VITE_API_BASE="" yarn build --base=/skillup-week8/
 ```
 
-再把 `dist/` 覆盖到本目录，并把 `index.html` 的标题改回「Node.js Skillup · 学习展板」。
+再把 `dist/` 覆盖到本目录即可。标题和 favicon 由 `vite.config.ts` 在构建期按
+`VITE_SHOWCASE_ONLY` 写入，产物本身就是对的，**不需要**复制后再改 `index.html`。
+
+完整流程（含双仓库边界与上线条件）见 `nodejs-skillup` 的
+`SHOWCASE-DEPLOY-PROTOCOL.md` 和 `deploy-showcase-pages` skill。
