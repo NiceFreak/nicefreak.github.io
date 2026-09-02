@@ -1,0 +1,21 @@
+{
+  "name": "더 커뮤니티 — 보이지 않는 손 / The Community：看不见的手",
+  "short_name": "더 커뮤니티 / The Community",
+  "description": "37가지 선택으로 당신의 판단 뒤에 숨어 있는 힘을 추적합니다. / 通过37次选择，追踪隐藏在你判断背后的力量。",
+  "lang": "ko-KR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#080808",
+  "theme_color": "#080808",
+  "orientation": "portrait-primary",
+  "categories": ["entertainment", "lifestyle"],
+  "icons": [
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

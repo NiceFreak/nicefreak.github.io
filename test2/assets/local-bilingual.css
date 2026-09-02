@@ -1,0 +1,189 @@
+/* Local Korean-Chinese edition */
+.local-translation,
+.question__translation {
+  font-family: "Noto Sans SC", "Noto Sans KR", sans-serif;
+  font-style: normal;
+  letter-spacing: 0;
+  text-transform: none;
+  overflow-wrap: anywhere;
+}
+
+.local-translation {
+  color: color-mix(in srgb, currentColor 72%, #8f9fbd);
+  font-weight: 500;
+}
+
+.local-translation--heading {
+  display: block;
+  margin-top: 0.5em;
+  font-size: 0.44em;
+  line-height: 1.45;
+}
+
+.local-translation--body {
+  display: block;
+  margin-top: 0.5em;
+  font-size: 0.86em;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.local-translation--label {
+  display: block;
+  margin-top: 0.35em;
+  font-size: 0.78em;
+  line-height: 1.4;
+  white-space: pre-line;
+}
+
+.local-translation--control {
+  display: block;
+  margin-top: 0.32em;
+  font-size: 0.72em;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.local-translation--inline {
+  display: inline;
+  margin-left: 0.2em;
+  font-size: 0.8em;
+  line-height: inherit;
+}
+
+.local-sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.site-header nav {
+  display: none;
+}
+
+.share-panel > .button.button--red,
+.share-panel > .share-panel__error,
+.share-panel > .result-program-card--mobile,
+.share-panel > .result-program-link,
+.share-panel > .compare-hint,
+.share-panel > a[href*="/compare/"] {
+  display: none !important;
+}
+
+.site-header nav a.local-has-translation {
+  white-space: nowrap;
+}
+
+.gate h1 .local-translation {
+  color: #a9a9a9;
+}
+
+.gate__name-guide .local-translation,
+.test-notices .local-translation {
+  color: #929292;
+}
+
+.test-notices p.local-has-translation {
+  margin-bottom: 15px;
+}
+
+.button.local-has-translation,
+.button .local-has-translation,
+button.local-has-translation {
+  line-height: 1.15;
+}
+
+.question.question--bilingual h1 {
+  min-height: 0;
+  margin-bottom: 18px;
+}
+
+.question__translation {
+  max-width: 920px;
+  min-height: 74px;
+  margin: 0 0 48px;
+  position: relative;
+  z-index: 1;
+  color: #b7b7b7;
+  font-size: clamp(17px, 1.65vw, 24px);
+  font-weight: 500;
+  line-height: 1.55;
+}
+
+.answers--2 button > span .local-translation {
+  color: #a9a9a9;
+}
+
+.answers--2 button:hover > span .local-translation,
+.answers--2 button.is-selected > span .local-translation {
+  color: inherit;
+}
+
+.season-two-result-dimensions li {
+  align-content: center;
+  row-gap: 4px;
+}
+
+.season-two-result-dimensions .local-result-dimension-translation {
+  grid-column: 2 / -1;
+  grid-row: 2;
+  display: block;
+  margin: 0;
+  color: #69758a;
+  font-size: clamp(8px, 0.72vw, 10px);
+  font-weight: 500;
+  line-height: 1.35;
+  word-break: normal;
+}
+
+.result-guide__body .local-translation--body,
+.result-guide__notices .local-translation--body {
+  color: #70798a;
+}
+
+.compare-stage__side .local-translation,
+.compare__people .local-translation,
+.result-card__head .local-translation {
+  color: #8f9bb1;
+}
+
+@media (max-width: 560px) {
+  .question.question--bilingual {
+    padding-top: 34px;
+  }
+
+  .question.question--bilingual h1 {
+    min-height: 0;
+    margin: 34px 0 14px;
+    font-size: 32px;
+    line-height: 1.2;
+  }
+
+  .question__translation {
+    min-height: 0;
+    margin-bottom: 30px;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  .local-translation--heading {
+    font-size: 0.48em;
+  }
+
+  .season-two-result-figure {
+    width: min(100%, 380px);
+    grid-template-columns: minmax(0, 1fr) clamp(104px, 31vw, 120px);
+    gap: clamp(8px, 3vw, 14px);
+  }
+
+  .season-two-result-dimensions .local-result-dimension-translation {
+    font-size: 7.5px;
+    line-height: 1.35;
+  }
+}
