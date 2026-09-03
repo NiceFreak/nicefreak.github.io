@@ -1,0 +1,21 @@
+{
+  "name": "사상검증구역 / 思想验证区",
+  "short_name": "사상검증 / 思想验证",
+  "description": "87개 문항으로 네 가지 사회적 태도를 살펴봅니다. / 通过87道题了解四个社会态度维度。",
+  "lang": "ko-KR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f0eee7",
+  "theme_color": "#f0eee7",
+  "orientation": "portrait-primary",
+  "categories": ["entertainment", "lifestyle"],
+  "icons": [
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

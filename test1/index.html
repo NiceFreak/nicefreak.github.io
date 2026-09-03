@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <base href="./" />
+    <script>
+      (() => {
+        const siteRootPath = new URL(".", document.baseURI).pathname;
+        const basename =
+          siteRootPath === "/" ? "" : siteRootPath.replace(/\/$/, "");
+        window.__COMMUNITY_BASE_PATH__ = basename;
+        window.__COMMUNITY_DEFAULT_SEASON__ = "/season/1";
+
+        const route = new URLSearchParams(window.location.search).get(
+          "__community_route",
+        );
+        if (route?.startsWith("/") && !route.startsWith("//")) {
+          window.history.replaceState(null, "", `${basename}${route}`);
+        }
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#f0eee7" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="author" content="더 커뮤니티 / The Community" />
+    <meta
+      name="description"
+      content="156만 명 이상이 참여한 사상검증 테스트. 내가 상식이라 믿는 것이 어디에 놓이는지 확인하세요. / 已有超过156万人参加的思想验证测试。看看你深信为常识的观念究竟处在什么位置。"
+    />
+    <meta
+      name="keywords"
+      content="더 커뮤니티, 사상검증구역, 사상검증 테스트, 시즌 1, The Community, 思想验证区, 第1季"
+    />
+    <meta
+      name="robots"
+      content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
+    />
+
+    <link rel="canonical" href="https://nicefreak.github.io/test1/" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="mask-icon" href="mask-icon.svg" color="#1646f5" />
+    <link rel="manifest" href="site.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:locale:alternate" content="zh_CN" />
+    <meta property="og:site_name" content="더 커뮤니티 / The Community" />
+    <meta
+      property="og:title"
+      content="시즌 1 — 사상검증구역 | 더 커뮤니티 / 第1季：思想验证区｜The Community"
+    />
+    <meta
+      property="og:description"
+      content="156만 명 이상이 참여한 사상검증 테스트. 내가 상식이라 믿는 것이 어디에 놓이는지 확인하세요. / 已有超过156万人参加的思想验证测试。看看你深信为常识的观念究竟处在什么位置。"
+    />
+    <meta property="og:url" content="https://nicefreak.github.io/test1/" />
+    <meta
+      property="og:image"
+      content="https://nicefreak.github.io/test1/assets/season-1-poster.webp"
+    />
+    <meta property="og:image:type" content="image/webp" />
+    <meta property="og:image:width" content="1000" />
+    <meta property="og:image:height" content="1429" />
+    <meta
+      property="og:image:alt"
+      content="사상검증구역 더 커뮤니티 포스터 / 《思想验证区：The Community》海报"
+    />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="시즌 1 — 사상검증구역 | 더 커뮤니티 / 第1季：思想验证区｜The Community"
+    />
+    <meta
+      name="twitter:description"
+      content="156만 명 이상이 참여한 사상검증 테스트. 내가 상식이라 믿는 것이 어디에 놓이는지 확인하세요. / 已有超过156万人参加的思想验证测试。看看你深信为常识的观念究竟处在什么位置。"
+    />
+    <meta
+      name="twitter:image"
+      content="https://nicefreak.github.io/test1/assets/season-1-poster.webp"
+    />
+
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta
+      name="apple-mobile-web-app-title"
+      content="사상검증구역 / 思想验证区"
+    />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "시즌 1 — 사상검증구역 / 第1季：思想验证区",
+        "alternateName": "The Community Season 1 / The Community 第1季",
+        "url": "https://nicefreak.github.io/test1/",
+        "image": "https://nicefreak.github.io/test1/assets/season-1-poster.webp",
+        "description": "156만 명 이상이 참여한 사상검증 테스트 / 已有超过156万人参加的思想验证测试。",
+        "applicationCategory": "EntertainmentApplication",
+        "operatingSystem": "Any",
+        "inLanguage": ["ko-KR", "zh-CN"],
+        "isAccessibleForFree": true,
+        "publisher": {
+          "@type": "Organization",
+          "name": "더 커뮤니티 / The Community",
+          "url": "https://thecommunity.co.kr/"
+        }
+      }
+    </script>
+    <title>
+      시즌 1 — 사상검증구역 | 더 커뮤니티 / 第1季：思想验证区｜The Community
+    </title>
+    <script type="module" crossorigin src="assets/index-BPnJDcvI.js"></script>
+    <link rel="stylesheet" crossorigin href="assets/index-MOXh0N3o.css" />
+    <link rel="stylesheet" href="assets/local-bilingual.css" />
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
