@@ -63,14 +63,16 @@
   border: 0 !important;
 }
 
-.site-header nav {
-  display: none;
+.site-header nav a[href$="/broadcast"] {
+  display: none !important;
 }
 
 .share-panel > .button.button--red,
 .share-panel > .share-panel__error,
+.share-panel > .result-program-promo,
 .share-panel > .result-program-card--mobile,
 .share-panel > .result-program-link,
+.share-panel > .section-label,
 .share-panel > .compare-hint,
 .share-panel > a[href*="/compare/"] {
   display: none !important;
@@ -125,12 +127,17 @@ button.local-has-translation {
   color: inherit;
 }
 
+.answers--scale::before {
+  content: "同意程度";
+  font-family: "Noto Sans SC", "Noto Sans KR", sans-serif;
+  letter-spacing: 0;
+}
+
 .season-two-result-dimensions li {
   align-content: center;
   row-gap: 4px;
 }
 
-.season-one-result-dimensions .local-result-dimension-translation,
 .season-two-result-dimensions .local-result-dimension-translation {
   grid-column: 2 / -1;
   grid-row: 2;
@@ -143,10 +150,12 @@ button.local-has-translation {
   word-break: normal;
 }
 
-.season-one-result-dimensions .local-result-dimension-translation {
-  grid-column: 1 / -1;
-  grid-row: 3;
-  color: #70798a;
+.season-one-axis__labels b[lang="zh-CN"],
+.season-one-axis__labels em[lang="zh-CN"] {
+  font-family: "Noto Sans SC", "Noto Sans KR", sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
 }
 
 .result-guide__body .local-translation--body,

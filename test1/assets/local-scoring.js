@@ -24,40 +24,40 @@ const AXES = [
 
 const SEASON_1_AXES = [
   {
-    id: "정치",
+    id: "politics",
     group: "politics",
     count: 21,
     scale: 6,
     reverse: new Set(Array.from({ length: 9 }, (_, index) => index + 1)),
     leftCode: "L",
     rightCode: "R",
-    leftLabel: "좌파",
-    rightLabel: "우파",
+    leftLabel: "평등",
+    rightLabel: "시장",
   },
   {
-    id: "젠더",
+    id: "gender",
     group: "gender",
     count: 21,
     scale: 6,
     reverse: new Set(Array.from({ length: 11 }, (_, index) => index + 1)),
     leftCode: "F",
     rightCode: "E",
-    leftLabel: "페미",
-    rightLabel: "이퀄",
+    leftLabel: "페미니즘",
+    rightLabel: "전통",
   },
   {
-    id: "계급",
+    id: "class",
     group: "class",
     count: 23,
     scale: 4,
     reverse: new Set(Array.from({ length: 12 }, (_, index) => index + 1)),
     leftCode: "W",
     rightCode: "U",
-    leftLabel: "서민",
-    rightLabel: "부유",
+    leftLabel: "생계형",
+    rightLabel: "풍요형",
   },
   {
-    id: "개방성",
+    id: "openness",
     group: "openness",
     count: 22,
     scale: 6,
@@ -65,9 +65,48 @@ const SEASON_1_AXES = [
     leftCode: "O",
     rightCode: "C",
     leftLabel: "개방",
-    rightLabel: "전통",
+    rightLabel: "질서",
   },
 ];
+
+const SEASON_1_QUESTIONNAIRE_VERSION = "season-1@2021-supabase";
+const SEASON_1_QUESTION_SET_HASH = "873aacb8d8b01594";
+const SEASON_1_SCORING_VERSION = "season-1-score@2";
+const SEASON_1_SUMMARY = "시즌 1의 네 축에서 드러난 선택의 좌표입니다.";
+const SEASON_1_KNOWN_ANOMALIES = Object.freeze([
+  Object.freeze({
+    id: "polSpread_T63/politics",
+    group: "politics",
+    leftRaw: 63,
+    observedIntensity: 1,
+    allowedValues: Object.freeze([3, 4]),
+    matchType: "axis-value-set",
+  }),
+  Object.freeze({
+    id: "polSpread_T84/politics",
+    group: "politics",
+    leftRaw: 84,
+    observedIntensity: 2,
+    allowedValues: Object.freeze([2, 5]),
+    matchType: "axis-value-set",
+  }),
+  Object.freeze({
+    id: "RANDOM_C/gender",
+    group: "gender",
+    leftRaw: 63,
+    observedIntensity: 1,
+    signature: "3,4,3,6,6,3,5,3,5,3,2,1,3,4,2,3,2,2,6,1,5",
+    matchType: "exact-axis-signature",
+  }),
+  Object.freeze({
+    id: "RANDOM_K/gender",
+    group: "gender",
+    leftRaw: 42,
+    observedIntensity: 2,
+    signature: "2,2,3,4,4,2,2,5,1,2,6,2,2,3,3,6,3,6,6,4,5",
+    matchType: "exact-axis-signature",
+  }),
+]);
 
 export const SEASON_1_QUESTION_SPECS = Object.freeze(
   SEASON_1_AXES.flatMap(({ group, count }) =>
@@ -163,6 +202,10 @@ function roundHalfUp(value) {
   return value < 0 ? -Math.floor(-value + 0.5) : Math.floor(value + 0.5);
 }
 
+function roundHalfUpRatio(numerator, denominator) {
+  return Math.floor((2 * numerator + denominator) / (2 * denominator));
+}
+
 function validateSeasonOneAnswers(answers) {
   if (!answers || typeof answers !== "object" || Array.isArray(answers)) {
     throw new Error("답변 데이터가 올바르지 않습니다. / 答题数据无效。");
@@ -185,23 +228,59 @@ function validateSeasonOneAnswers(answers) {
   }
 }
 
-function scoreSeasonOneAxis(axis, answers) {
-  const directedValues = Array.from({ length: axis.count }, (_, index) => {
+function seasonOneIntensity(leftRaw, denominator) {
+  if (5 * leftRaw < denominator) return 3;
+  if (5 * leftRaw < 2 * denominator) return 2;
+  if (5 * leftRaw < 3 * denominator) return 1;
+  if (5 * leftRaw < 4 * denominator) return 2;
+  return 3;
+}
+
+function seasonOneDigit(left, intensity) {
+  if (left) return intensity === 1 ? 3 : intensity === 2 ? 2 : 1;
+  return intensity === 1 ? 4 : intensity === 2 ? 5 : 6;
+}
+
+function detectSeasonOneKnownAnomaly(axis, leftRaw, values) {
+  const signature = values.join(",");
+  return (
+    SEASON_1_KNOWN_ANOMALIES.find((profile) => {
+      if (profile.group !== axis.group || profile.leftRaw !== leftRaw)
+        return false;
+      if (profile.signature) return profile.signature === signature;
+      return values.every((value) => profile.allowedValues.includes(value));
+    }) ?? null
+  );
+}
+
+function scoreSeasonOneAxis(axis, answers, applyKnownAnomalies) {
+  const values = Array.from({ length: axis.count }, (_, index) => {
     const number = index + 1;
     const id = `s1-${axis.group}-${String(number).padStart(2, "0")}`;
-    const answer = answers[id];
-    return axis.reverse.has(number) ? axis.scale + 1 - answer : answer;
+    return answers[id];
   });
-  const mean =
-    directedValues.reduce((total, value) => total + value, 0) /
-    directedValues.length;
-  const normalizedBand = 1 + ((mean - 1) / (axis.scale - 1)) * 5;
-  const band = Math.max(1, Math.min(6, roundHalfUp(normalizedBand)));
-  const leftPercent = roundHalfUp(
-    ((axis.scale - mean) / (axis.scale - 1)) * 100,
-  );
+  const denominator = axis.count * (axis.scale - 1);
+  const leftRaw = values.reduce((total, value, index) => {
+    const number = index + 1;
+    return total + (axis.reverse.has(number) ? value - 1 : axis.scale - value);
+  }, 0);
+  const leftPercent = roundHalfUpRatio(100 * leftRaw, denominator);
   const rightPercent = 100 - leftPercent;
-  const left = band <= 3;
+  const left = 2 * leftRaw > denominator;
+  const plainIntensity = seasonOneIntensity(leftRaw, denominator);
+  const anomaly = detectSeasonOneKnownAnomaly(axis, leftRaw, values);
+  const intensity =
+    applyKnownAnomalies && anomaly ? anomaly.observedIntensity : plainIntensity;
+  const digit = seasonOneDigit(left, intensity);
+  const knownAnomaly = anomaly
+    ? {
+        id: anomaly.id,
+        matchType: anomaly.matchType,
+        plainIntensity,
+        observedIntensity: anomaly.observedIntensity,
+        applied: Boolean(applyKnownAnomalies),
+      }
+    : null;
 
   return {
     id: axis.id,
@@ -210,17 +289,29 @@ function scoreSeasonOneAxis(axis, answers) {
     leftPercent,
     rightPercent,
     dominant: left ? axis.leftLabel : axis.rightLabel,
-    code: `${left ? axis.leftCode : axis.rightCode}${band}`,
-    band,
+    intensity,
+    code: `${left ? axis.leftCode : axis.rightCode}${digit}`,
+    band: digit,
+    digit,
+    plainIntensity,
+    knownAnomaly,
   };
 }
 
-export function scoreSeason1Answers(answers) {
+export function scoreSeason1Answers(
+  answers,
+  { applyKnownAnomalies = true } = {},
+) {
   validateSeasonOneAnswers(answers);
-  const axes = SEASON_1_AXES.map((axis) => scoreSeasonOneAxis(axis, answers));
+  const axes = SEASON_1_AXES.map((axis) =>
+    scoreSeasonOneAxis(axis, answers, applyKnownAnomalies),
+  );
   return {
     axes,
     resultType: axes.map(({ code }) => code).join(""),
+    knownAnomalies: axes
+      .filter((axis) => axis.knownAnomaly)
+      .map((axis) => ({ axis: axis.id, ...axis.knownAnomaly })),
   };
 }
 
@@ -234,19 +325,20 @@ export function buildSeason1Result(payload, publicResultId) {
   const score = scoreSeason1Answers(payload.answers);
   return {
     season: "season-1",
-    questionnaireVersion: "season-1@2026-09-local",
-    questionSetHash: "season-1-public-bundle-87",
-    scoringVersion: "season-1-normalized-local@1",
+    questionnaireVersion: SEASON_1_QUESTIONNAIRE_VERSION,
+    questionSetHash: SEASON_1_QUESTION_SET_HASH,
+    scoringVersion: SEASON_1_SCORING_VERSION,
     resultType: score.resultType,
-    title: score.resultType,
-    summary: "",
+    title: `${score.resultType} 유형`,
+    summary: SEASON_1_SUMMARY,
     axes: score.axes,
+    knownAnomalies: score.knownAnomalies,
     publicResultId,
     referralCode: publicResultId,
     createdAt: new Date().toISOString(),
     consentVersion: payload.consentVersion ?? "result-storage-v1",
     displayName: payload.displayName?.trim() || null,
-    calculation: "local-normalized-direction-v1",
+    calculation: "season-1-score@2-compatible-local",
   };
 }
 

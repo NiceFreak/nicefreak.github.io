@@ -63,14 +63,16 @@
   border: 0 !important;
 }
 
-.site-header nav {
-  display: none;
+.site-header nav a[href$="/broadcast"] {
+  display: none !important;
 }
 
 .share-panel > .button.button--red,
 .share-panel > .share-panel__error,
+.share-panel > .result-program-promo,
 .share-panel > .result-program-card--mobile,
 .share-panel > .result-program-link,
+.share-panel > .section-label,
 .share-panel > .compare-hint,
 .share-panel > a[href*="/compare/"] {
   display: none !important;
@@ -125,6 +127,12 @@ button.local-has-translation {
   color: inherit;
 }
 
+.answers--scale::before {
+  content: "同意程度";
+  font-family: "Noto Sans SC", "Noto Sans KR", sans-serif;
+  letter-spacing: 0;
+}
+
 .season-two-result-dimensions li {
   align-content: center;
   row-gap: 4px;
@@ -140,6 +148,14 @@ button.local-has-translation {
   font-weight: 500;
   line-height: 1.35;
   word-break: normal;
+}
+
+.season-one-axis__labels b[lang="zh-CN"],
+.season-one-axis__labels em[lang="zh-CN"] {
+  font-family: "Noto Sans SC", "Noto Sans KR", sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
 }
 
 .result-guide__body .local-translation--body,

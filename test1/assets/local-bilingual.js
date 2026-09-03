@@ -140,6 +140,8 @@ function translateDynamicText(source, element) {
   const seasonOneResult = source.match(/^(.+)님의 사상검증 결과$/);
   if (seasonOneResult) return `${seasonOneResult[1]}的思想验证结果`;
 
+  if (source === "당신의 사상검증 결과") return "你的思想验证结果";
+
   const namedReferral = source.match(
     /^(.+)의 손과 당신의 손은 얼마나 다를까\.$/,
   );
@@ -197,6 +199,38 @@ function decorateGenericText() {
 function decorateGate() {
   const input = document.querySelector(".gate input");
   if (input) input.placeholder = "이름 (선택) / 姓名（选填）";
+}
+
+function decorateNavigation() {
+  const basePath = window.__COMMUNITY_BASE_PATH__;
+  if (basePath !== "/test1" && basePath !== "/test2") return;
+
+  document.querySelectorAll(".site-header nav a").forEach((link) => {
+    const match = sourceText(link).match(/^시즌 ([12])$/);
+    if (!match) return;
+
+    const season = match[1];
+    const target = `/test${season}/`;
+    link.href = target;
+    link.dataset.localSeasonTarget = target;
+    if (link.dataset.localSeasonNavigation === "true") return;
+
+    link.dataset.localSeasonNavigation = "true";
+    link.addEventListener("click", (event) => {
+      if (
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      window.location.assign(link.dataset.localSeasonTarget);
+    });
+  });
 }
 
 function decorateQuestion() {
@@ -289,42 +323,23 @@ function decorateSeasonOneResultDimensions() {
   document
     .querySelectorAll(".season-one-result-dimensions > li")
     .forEach((item) => {
-      const axis = sourceText(
-        item.querySelector(".season-one-axis__labels em"),
-      );
-      const left = sourceText(
-        item.querySelector(".season-one-axis__labels span:first-child b"),
-      );
-      const right = sourceText(
-        item.querySelector(".season-one-axis__labels span:last-child b"),
-      );
-      const score = sourceText(
-        item.querySelector(".season-one-axis__track strong"),
-      );
-      const selected = item.classList.contains("season-one-axis--left")
-        ? left
-        : right;
-      const chineseAxis = seasonOneResultTerms[axis];
-      const chineseSelected = seasonOneResultTerms[selected];
-      let translation = item.querySelector(
-        ":scope > .local-result-dimension-translation",
-      );
+      item
+        .querySelector(":scope > .local-result-dimension-translation")
+        ?.remove();
 
-      if (!chineseAxis || !chineseSelected || !score) {
-        translation?.remove();
-        return;
-      }
+      item
+        .querySelectorAll(
+          ".season-one-axis__labels em, .season-one-axis__labels b",
+        )
+        .forEach((element) => {
+          const korean = element.dataset.localSource || sourceText(element);
+          const chinese = seasonOneResultTerms[korean];
+          if (!chinese) return;
 
-      const chinese = `${chineseAxis}：${chineseSelected}｜${score}分`;
-      if (!translation) {
-        translation = document.createElement("span");
-        translation.className =
-          "local-translation local-result-dimension-translation";
-        translation.lang = "zh-CN";
-        item.append(translation);
-      }
-      if (translation.textContent !== chinese)
-        translation.textContent = chinese;
+          element.dataset.localSource = korean;
+          element.lang = "zh-CN";
+          if (element.textContent !== chinese) element.textContent = chinese;
+        });
     });
 }
 
@@ -460,8 +475,13 @@ function bilingualMetadata(value) {
   return chinese ? `${value} / ${chinese}` : value;
 }
 
+function chineseMetadataTitle(value) {
+  const [source] = value.split(" / ");
+  return METADATA_TRANSLATIONS[source] ?? value;
+}
+
 function decorateMetadata() {
-  const title = bilingualMetadata(document.title);
+  const title = chineseMetadataTitle(document.title);
   if (title !== document.title) document.title = title;
   document
     .querySelectorAll(
@@ -479,6 +499,7 @@ function scheduleDecoration() {
   updateScheduled = true;
   queueMicrotask(() => {
     updateScheduled = false;
+    decorateNavigation();
     decorateGate();
     decorateQuestion();
     decorateAdminQuestionBank();

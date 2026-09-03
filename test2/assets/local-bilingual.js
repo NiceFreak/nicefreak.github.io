@@ -1,4 +1,7 @@
-import { SEASON_2_TRANSLATIONS } from "./local-bilingual-data.js";
+import {
+  SEASON_1_TRANSLATIONS,
+  SEASON_2_TRANSLATIONS,
+} from "./local-bilingual-data.js";
 import {
   ATTRIBUTE_TRANSLATIONS,
   METADATA_TRANSLATIONS,
@@ -8,11 +11,18 @@ import {
   translateResultType,
 } from "./local-ui-translations.js";
 
+const allQuestionTranslations = [
+  ...SEASON_1_TRANSLATIONS,
+  ...SEASON_2_TRANSLATIONS,
+];
 const translationsByKorean = new Map(
-  SEASON_2_TRANSLATIONS.map((translation) => [translation.korean, translation]),
+  allQuestionTranslations.map((translation) => [
+    translation.korean,
+    translation,
+  ]),
 );
 const translationsById = new Map(
-  SEASON_2_TRANSLATIONS.map((translation) => [translation.id, translation]),
+  allQuestionTranslations.map((translation) => [translation.id, translation]),
 );
 const uiTranslations = new Map(
   UI_TRANSLATION_ENTRIES.map(([korean, chinese]) => [
@@ -130,6 +140,8 @@ function translateDynamicText(source, element) {
   const seasonOneResult = source.match(/^(.+)님의 사상검증 결과$/);
   if (seasonOneResult) return `${seasonOneResult[1]}的思想验证结果`;
 
+  if (source === "당신의 사상검증 결과") return "你的思想验证结果";
+
   const namedReferral = source.match(
     /^(.+)의 손과 당신의 손은 얼마나 다를까\.$/,
   );
@@ -189,8 +201,40 @@ function decorateGate() {
   if (input) input.placeholder = "이름 (선택) / 姓名（选填）";
 }
 
+function decorateNavigation() {
+  const basePath = window.__COMMUNITY_BASE_PATH__;
+  if (basePath !== "/test1" && basePath !== "/test2") return;
+
+  document.querySelectorAll(".site-header nav a").forEach((link) => {
+    const match = sourceText(link).match(/^시즌 ([12])$/);
+    if (!match) return;
+
+    const season = match[1];
+    const target = `/test${season}/`;
+    link.href = target;
+    link.dataset.localSeasonTarget = target;
+    if (link.dataset.localSeasonNavigation === "true") return;
+
+    link.dataset.localSeasonNavigation = "true";
+    link.addEventListener("click", (event) => {
+      if (
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      window.location.assign(link.dataset.localSeasonTarget);
+    });
+  });
+}
+
 function decorateQuestion() {
-  const question = document.querySelector(".test-shell--two .question");
+  const question = document.querySelector(".test-shell .question");
   if (!question) return;
 
   const heading = question.querySelector("h1");
@@ -226,11 +270,15 @@ function decorateQuestion() {
     chinese.textContent = translation.chinese;
   }
 
-  question.querySelectorAll(".answers--2 button").forEach((button) => {
+  question.querySelectorAll(".answers button").forEach((button) => {
     const mark = button.querySelector("b")?.textContent.trim();
     const label = button.querySelector("span");
     const answerChinese =
-      mark === "O" ? "同意" : mark === "×" || mark === "X" ? "不同意" : null;
+      mark === "O"
+        ? "同意"
+        : mark === "×" || mark === "X"
+          ? "不同意"
+          : uiTranslations.get(sourceText(label));
     if (label && answerChinese)
       ensureTranslation(label, answerChinese, { mode: "control" });
   });
@@ -244,6 +292,55 @@ function decorateQuestion() {
 
   const retry = question.querySelector(".error button");
   if (retry) ensureTranslation(retry, "重试", { mode: "inline" });
+}
+
+const seasonOneResultTerms = Object.freeze({
+  정치: "政治",
+  좌파: "左翼",
+  우파: "右翼",
+  젠더: "性别",
+  페미: "女性主义",
+  이퀄: "平权主义",
+  계급: "阶层",
+  서민: "平民",
+  부유: "富裕",
+  개방성: "开放性",
+  개방: "开放",
+  전통: "传统",
+});
+
+function translateSeasonOneResultLabel(korean) {
+  const match = korean.match(
+    /^(정치|젠더|계급|개방성): (좌파|우파|페미|이퀄|서민|부유|개방|전통) (\d+)점$/,
+  );
+  if (!match) return null;
+
+  const [, axis, selected, score] = match;
+  return `${seasonOneResultTerms[axis]}：${seasonOneResultTerms[selected]} ${score}分`;
+}
+
+function decorateSeasonOneResultDimensions() {
+  document
+    .querySelectorAll(".season-one-result-dimensions > li")
+    .forEach((item) => {
+      item
+        .querySelector(":scope > .local-result-dimension-translation")
+        ?.remove();
+
+      item
+        .querySelectorAll(
+          ".season-one-axis__labels em, .season-one-axis__labels b",
+        )
+        .forEach((element) => {
+          const korean = element.dataset.localSource || sourceText(element);
+          const chinese = seasonOneResultTerms[korean];
+          if (!chinese) return;
+
+          element.dataset.localSource = korean;
+          element.lang = "zh-CN";
+          if (element.textContent !== chinese) element.textContent = chinese;
+        });
+    });
 }
 
 function decorateAdminQuestionBank() {
@@ -343,7 +440,8 @@ function decorateAttributes() {
     const korean = element.getAttribute("aria-label");
     const chinese =
       ATTRIBUTE_TRANSLATIONS[korean] ??
-      uiTranslations.get(normalizeWhitespace(korean));
+      uiTranslations.get(normalizeWhitespace(korean)) ??
+      translateSeasonOneResultLabel(normalizeWhitespace(korean));
     if (chinese) ensureBilingualAccessibleName(element, korean, chinese);
   });
 
@@ -377,8 +475,13 @@ function bilingualMetadata(value) {
   return chinese ? `${value} / ${chinese}` : value;
 }
 
+function chineseMetadataTitle(value) {
+  const [source] = value.split(" / ");
+  return METADATA_TRANSLATIONS[source] ?? value;
+}
+
 function decorateMetadata() {
-  const title = bilingualMetadata(document.title);
+  const title = chineseMetadataTitle(document.title);
   if (title !== document.title) document.title = title;
   document
     .querySelectorAll(
@@ -396,9 +499,11 @@ function scheduleDecoration() {
   updateScheduled = true;
   queueMicrotask(() => {
     updateScheduled = false;
+    decorateNavigation();
     decorateGate();
     decorateQuestion();
     decorateAdminQuestionBank();
+    decorateSeasonOneResultDimensions();
     decorateResultDimensions();
     decorateGenericText();
     decorateAttributes();

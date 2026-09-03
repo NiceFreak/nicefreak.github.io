@@ -13,7 +13,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "정치",
     "groupChinese": "政治",
     "korean": "거주가 아닌 투기 목적의 부동산 구입 행위는 규제되어야 한다.",
-    "chinese": "应当限制并非用于居住、而是以投机为目的的房地产购买行为。",
+    "chinese": "应当对并非出于居住、而是出于投机目的的购房行为加以限制。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -37,7 +37,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "정치",
     "groupChinese": "政治",
     "korean": "도로나 전기 같은 공공재는 반드시 국가가 운영해야 한다.",
-    "chinese": "道路、电力等公共资源必须由国家运营。",
+    "chinese": "道路、电力等公共产品必须由国家运营。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -45,7 +45,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "정치",
     "groupChinese": "政治",
     "korean": "고액의 사교육은 규제되어야 한다.",
-    "chinese": "应当限制高价课外教育。",
+    "chinese": "应当对收费高昂的校外教育加以限制。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -61,7 +61,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "정치",
     "groupChinese": "政治",
     "korean": "기업이 정부보다 더 큰 해악을 끼칠 가능성이 높다.",
-    "chinese": "企业比政府更有可能造成更大的危害。",
+    "chinese": "企业很可能会比政府造成更大的危害。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -69,7 +69,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "정치",
     "groupChinese": "政治",
     "korean": "수입품에 대한 관세는 자국의 일자리를 보호하는 좋은 방법이다.",
-    "chinese": "对进口商品征收关税是保护本国就业的好办法。",
+    "chinese": "对进口商品征收关税是保护本国就业岗位的好办法。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -85,7 +85,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "정치",
     "groupChinese": "政治",
     "korean": "자유시장에 맡기는 게 정부정책을 세우는 것보다 낫다.",
-    "chinese": "交给自由市场调节，比制定政府政策更好。",
+    "chinese": "交由自由市场调节，比由政府制定政策更好。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -109,7 +109,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "정치",
     "groupChinese": "政治",
     "korean": "정부가 민간사업에 개입하면 대부분 망친다고 봐야 한다.",
-    "chinese": "政府介入民营事业，多半会把事情搞砸。",
+    "chinese": "政府一旦干预民间经营活动，多半会把事情搞砸。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -133,7 +133,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "정치",
     "groupChinese": "政治",
     "korean": "경제 성장 우선 정책이 복지 우선 정책보다 빈곤 탈출에 더 큰 기여를 할 것이다.",
-    "chinese": "比起优先发展福利的政策，优先促进经济增长的政策更有助于摆脱贫困。",
+    "chinese": "与福利优先政策相比，经济增长优先政策会为脱贫作出更大贡献。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -157,7 +157,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "정치",
     "groupChinese": "政治",
     "korean": "내가 혜택을 받지 않는 공공 사업에 대해서는 세금을 납부하지 않아야 한다.",
-    "chinese": "对于我无法从中受益的公共事业，我不应缴纳相关税款。",
+    "chinese": "我不应为自己没有从中受益的公共项目缴税。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -173,7 +173,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "젠더",
     "groupChinese": "性别",
     "korean": "여성들이 보건휴가(생리휴가)를 주말에 붙여 쓰는 것은 정당한 권리행사이므로 비난할 수 없다.",
-    "chinese": "女性把保健假（生理假）与周末连休是在正当行使权利，不应受到指责。",
+    "chinese": "女性把保健假（生理假）和周末连在一起休，是正当行使权利，不应受到指责。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -229,7 +229,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "젠더",
     "groupChinese": "性别",
     "korean": "남자와 여자가 같은 직업에 같은 연봉을 받고 있다면 실은 여자가 더 유능할 것이다.",
-    "chinese": "如果男女从事同一种职业并领取相同年薪，那么实际上女性可能更有能力。",
+    "chinese": "如果男女从事同一种职业且年薪相同，那么实际上女性的能力会更强。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -245,7 +245,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "젠더",
     "groupChinese": "性别",
     "korean": "데이트와 섹스에 대한 주류 문화의 규범은 남성의 욕구를 만족시키기 위한 가부장제를 기반으로 하고 있다.",
-    "chinese": "主流文化中有关约会和性行为的规范，以满足男性欲望的父权制度为基础。",
+    "chinese": "主流文化中有关约会和性行为的规范，建立在旨在满足男性欲望的父权制基础之上。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -253,7 +253,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "젠더",
     "groupChinese": "性别",
     "korean": "여성 모델이 속옷이나 수영복을 입고 찍는 섹시화보는 그동안 성취해 온 여성인권을 후퇴시킨다.",
-    "chinese": "女性模特穿着内衣或泳装拍摄性感写真，会使已经取得的女性权利发生倒退。",
+    "chinese": "女性模特穿着内衣或泳装拍摄的性感写真，会使迄今争取到的女性权利出现倒退。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -285,7 +285,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "젠더",
     "groupChinese": "性别",
     "korean": "오늘날 한국 사회에서 여자로 산다는 것은 남자로 사는 것보다 더 편한 점이 많다.",
-    "chinese": "在当今韩国社会，作为女性生活比作为男性生活有更多便利之处。",
+    "chinese": "在当今韩国社会，以女性身份生活，在很多方面比以男性身份生活更轻松。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -301,7 +301,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "젠더",
     "groupChinese": "性别",
     "korean": "임금의 성별 격차는 근거 없는 믿음이다. 여성은 이미 같은 노동에 대해 남성과 동등한 보수를 받는다.",
-    "chinese": "所谓性别薪酬差距是一种没有根据的观念。女性已经能够就同等劳动获得与男性相同的报酬。",
+    "chinese": "性别薪酬差距是一种毫无根据的观念。女性从事同等劳动时，获得的报酬已经与男性相同。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -325,7 +325,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "젠더",
     "groupChinese": "性别",
     "korean": "페미니즘을 지지하는 남성은 남자답지 못한 구석이 있는 게 사실이다.",
-    "chinese": "支持女权主义的男性确实有不够“男子汉”的一面。",
+    "chinese": "支持女性主义的男性，确实有些地方不够有男子气概。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -333,7 +333,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "젠더",
     "groupChinese": "性别",
     "korean": "여성이 우울증과 같은 정신질환을 호소할 때는 엄살인 경우가 많다.",
-    "chinese": "女性诉说抑郁症等精神疾病时，很多时候是在小题大做。",
+    "chinese": "女性诉说自己患有抑郁症等精神疾病时，很多时候是在夸大病情。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -357,7 +357,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "개방성",
     "groupChinese": "开放性",
     "korean": "무슬림이 많은 지역이라면 이슬람 율법에 따른 할랄 음식 인증제를 지자체가 지원해 줄 필요가 있다.",
-    "chinese": "在穆斯林人口较多的地区，地方政府有必要支持依据伊斯兰教法建立的清真食品认证制度。",
+    "chinese": "在穆斯林人口较多的地区，地方政府有必要支持依据伊斯兰教法的清真食品认证制度。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -365,7 +365,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "개방성",
     "groupChinese": "开放性",
     "korean": "조선족이 범죄를 저지를 확률이 높다고 느끼는 것은 편견에 사로잡힌 잘못된 생각이다.",
-    "chinese": "认为朝鲜族更有可能犯罪，是一种受偏见影响的错误想法。",
+    "chinese": "觉得中国朝鲜族犯罪的概率很高，是一种受偏见左右的错误想法。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -373,7 +373,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "개방성",
     "groupChinese": "开放性",
     "korean": "방송의 수어해설화면은 농인의 권리를 위한 당연한 조치이므로 지금보다 더 큰 사이즈로, 모든 방송에 나와야 한다.",
-    "chinese": "电视节目设置手语解说画面是保障聋人权利的应有措施，因此画面应当比现在更大，并出现在所有节目中。",
+    "chinese": "电视节目中的手语翻译画面是保障聋人权利的应有措施，因此应当比现在更大，并在所有节目中出现。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -381,7 +381,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "개방성",
     "groupChinese": "开放性",
     "korean": "숨길 것이 없는 떳떳한 사람에게는 정부의 감시가 오히려 그를 보호해주는 수단이 된다.",
-    "chinese": "对于没有任何事情需要隐瞒的坦荡之人，政府监控反而是一种保护手段。",
+    "chinese": "对没有什么可隐瞒、问心无愧的人来说，政府的监控反而会成为保护他们的手段。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -397,7 +397,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "개방성",
     "groupChinese": "开放性",
     "korean": "우리 사회에서는 사형 집행이 필요하다.",
-    "chinese": "我们的社会有必要执行死刑。",
+    "chinese": "韩国社会有必要执行死刑。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -405,7 +405,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "개방성",
     "groupChinese": "开放性",
     "korean": "팀워크를 위해서는 내키지 않더라도 회식에 다같이 참여해야한다.",
-    "chinese": "为了团队合作，即使不情愿，也应当和大家一起参加集体聚餐。",
+    "chinese": "为了团队合作，即使不情愿，所有人也应当一起参加团队聚餐。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -421,7 +421,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "개방성",
     "groupChinese": "开放性",
     "korean": "“절이 싫으면 중이 떠나야지”라는 말은 대부분의 경우 옳다.",
-    "chinese": "“和尚不喜欢寺庙就该自己离开”这句话在大多数情况下是对的。",
+    "chinese": "“若不喜欢寺庙，就该由和尚自己离开”（韩语俗语，意指对所在组织或环境不满的一方应自行离开）这句话在大多数情况下是对的。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -429,7 +429,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "개방성",
     "groupChinese": "开放性",
     "korean": "다수를 위해 소수가 희생하고 따르는 것이 민주주의의 원칙이다.",
-    "chinese": "少数人为多数人作出牺牲并服从，是民主主义的原则。",
+    "chinese": "少数为了多数作出牺牲并服从多数，是民主的原则。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -445,7 +445,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "개방성",
     "groupChinese": "开放性",
     "korean": "대중매체에 긍정적인 성소수자 캐릭터가 자주 등장하는 것은 소수자 가시화를 위한 좋은 방법이다.",
-    "chinese": "大众媒体经常呈现正面的性少数群体角色，是提高少数群体可见度的好办法。",
+    "chinese": "大众媒体经常出现正面的性少数群体角色，是让少数群体更多进入公众视野的好办法。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -453,7 +453,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "개방성",
     "groupChinese": "开放性",
     "korean": "PC주의자들의 주장이 선을 넘는 경우가 많다.",
-    "chinese": "政治正确倡导者的主张经常越界。",
+    "chinese": "政治正确倡导者的主张常常过了头。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -461,7 +461,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "개방성",
     "groupChinese": "开放性",
     "korean": "세상은 확실히 더 안 좋은 방향으로 변하고 있다.",
-    "chinese": "这个世界显然正在朝着更坏的方向变化。",
+    "chinese": "这个世界确实正在朝着更坏的方向变化。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -469,7 +469,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "개방성",
     "groupChinese": "开放性",
     "korean": "한국 사회에 온 이주민은 우리 문화에 동화시키는 것이 좋다.",
-    "chinese": "最好让来到韩国社会的移民融入并同化于我们的文化。",
+    "chinese": "最好让来到韩国社会的移民同化于韩国文化。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -477,7 +477,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "개방성",
     "groupChinese": "开放性",
     "korean": "우리나라로 들어오는 이민자는 그 수를 최소화 시켜야한다.",
-    "chinese": "应当尽可能减少进入我国的移民数量。",
+    "chinese": "应当把进入韩国的移民人数降至最低。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -493,7 +493,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "개방성",
     "groupChinese": "开放性",
     "korean": "장애인들이 바쁜 출퇴근 시간에까지 피해를 끼치며 시위하는 것은 동의할 수 없다.",
-    "chinese": "我无法认同残障人士在繁忙通勤时段举行示威并给他人造成不便。",
+    "chinese": "我无法认同残障人士甚至在繁忙的上下班时段举行示威并给他人造成损害。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -501,7 +501,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "개방성",
     "groupChinese": "开放性",
     "korean": "디즈니는 인어공주 실사영화에 흑인을 캐스팅함으로써 원작의 추억을 간직한 팬들을 배신했다.",
-    "chinese": "迪士尼让黑人演员出演真人版《小美人鱼》，背叛了珍藏原作回忆的影迷。",
+    "chinese": "迪士尼在真人版《小美人鱼》中启用黑人演员，背叛了那些珍视原作回忆的粉丝。",
     "answers": "1–6=反对至同意"
   },
   {
@@ -525,7 +525,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "계급",
     "groupChinese": "阶层",
     "korean": "조금만 어긋나도 인생이 끝장날 것 같은 부담감에 늘 긴장하며 살아왔다",
-    "chinese": "我一直生活在紧张之中，觉得只要稍有差错，人生就可能彻底毁掉。",
+    "chinese": "我一直生活得很紧张，总觉得只要稍有差池，人生就可能彻底完蛋。",
     "answers": "1–4=从不至总是"
   },
   {
@@ -541,7 +541,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "계급",
     "groupChinese": "阶层",
     "korean": "경제적인 측면에서는 부모덕을 본 적이 없다",
-    "chinese": "在经济方面，我从未受益于父母的帮助。",
+    "chinese": "在经济方面，我从未沾过父母的光。",
     "answers": "1–4=从不至总是"
   },
   {
@@ -565,7 +565,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "계급",
     "groupChinese": "阶层",
     "korean": "어떤 종류든 저소득층을 위한 지원금을 받은 적이 있다",
-    "chinese": "我曾领取过任何形式的低收入群体补助金。",
+    "chinese": "我曾领取过某种面向低收入群体的补助。",
     "answers": "1–4=从不至总是"
   },
   {
@@ -581,7 +581,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "계급",
     "groupChinese": "阶层",
     "korean": "나 또는 가족의 병원비가 부족해 비참했던 경험이 있다",
-    "chinese": "我曾因自己或家人的医疗费不足而有过痛苦的经历。",
+    "chinese": "我曾有过因无力支付自己或家人的医疗费而十分窘迫的经历。",
     "answers": "1–4=从不至总是"
   },
   {
@@ -589,7 +589,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "계급",
     "groupChinese": "阶层",
     "korean": "대학 시절의 주된 기억 중 하나는 아르바이트였다",
-    "chinese": "我对大学时期的主要记忆之一是打工。",
+    "chinese": "大学时期，打工是我的主要记忆之一。",
     "answers": "1–4=从不至总是"
   },
   {
@@ -629,7 +629,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "계급",
     "groupChinese": "阶层",
     "korean": "어린 시절 과외를 받아본 적 있다",
-    "chinese": "小时候，我曾接受过课外辅导。",
+    "chinese": "小时候，我曾接受过私人补习。",
     "answers": "1–4=从不至总是"
   },
   {
@@ -637,7 +637,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "계급",
     "groupChinese": "阶层",
     "korean": "부모님이 취미로 골프를 즐기는 편이다",
-    "chinese": "我的父母通常把打高尔夫作为一项爱好。",
+    "chinese": "我的父母平时喜欢打高尔夫球。",
     "answers": "1–4=从不至总是"
   },
   {
@@ -693,7 +693,7 @@ export const SEASON_1_TRANSLATIONS = Object.freeze([
     "groupKorean": "계급",
     "groupChinese": "阶层",
     "korean": "어릴 적 부모님이 읽는 책이 책꽂이에 적어도 스무 권 넘게 있었다",
-    "chinese": "小时候，家中书架上父母阅读的书至少有二十多本。",
+    "chinese": "小时候，家中书架上有超过二十本父母看的书。",
     "answers": "1–4=从不至总是"
   }
 ]);
